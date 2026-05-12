@@ -1,0 +1,23 @@
+/**
+ * Design tokens ported from NovaMind HTML demo (cream / ink / terra palette).
+ */
+:root {
+  --cream: #f5f4ef;
+  --ink: #1a1915;
+  --ink2: #26251f;
+  --stone: #7a7870;
+  --stone-lt: #b5b2aa;
+  --sand: #e8e5dc;
+  --surf: #edebe3;
+  --surf2: #e4e0d6;
+  --terra: #c96442;
+  --blue: #4a7fa5;
+  --green: #3d6b4f;
+  --red: #8b3333;
+  --amber: #8a5c1a;
+  --purple: #5b3e8a;
+  --b: rgba(26, 25, 21, 0.09);
+  --bm: rgba(26, 25, 21, 0.16);
+  --r: 5px;
+  --rl: 9px;
+}
