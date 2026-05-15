@@ -8,35 +8,35 @@
 
 ## Introduction
 
-NovaMind is building (or has built) a **semi-autonomous research agent** with **literature review**, **sponsor-scoped data validation**, and **hypothesis generation**, backed by **PubMed RAG (~3y)** and downstream **Hypothesis deliverable** JSON. Leadership’s real question is how to get **model optionality** without **rebuilding the product every time a frontier model shifts**—and how to separate **model quality** from **harness quality** from **domain stack**.
+NovaMind is building (or has built) a **semi-autonomous research agent** with **literature review**, **sponsor-scoped data validation**, and **hypothesis generation**, backed by **PubMed RAG (~3y)** and downstream **Hypothesis deliverable** JSON. Today’s production model layer is **OpenAI’s GPT‑5 class**—**GPT‑5** with **GPT‑5‑mini** for lighter lanes—and leadership is **also evaluating Gemini 3** alongside Claude. The exec question is still how to get **model optionality** without **rebuilding the product every time a frontier model shifts**—and how to separate **model quality** from **harness quality** from **domain stack**.
 
-**Central thesis:** the **Claude Agent SDK** is the same **managed tool loop and context patterns** that power **Claude Code**, exposed as a **library**—so multi-agent patterns (subagents, hooks, permissions, sessions, MCP, Skills) are **first-class**, not bespoke `while (tool_use)` glue per team ([Agent SDK overview](https://docs.anthropic.com/en/agent-sdk/overview)). **That thesis is about harness shape, not “Claude beats GPT‑5.1 on every leaderboard”**—see **Agent SDK vs a GPT‑5.1‑centric stack** below.
+**Central thesis:** the **Claude Agent SDK** is the same **managed tool loop and context patterns** that power **Claude Code**, exposed as a **library**—so multi-agent patterns (subagents, hooks, permissions, sessions, MCP, Skills) are **first-class**, not bespoke `while (tool_use)` glue per team ([Agent SDK overview](https://docs.anthropic.com/en/agent-sdk/overview)). **That thesis is about harness shape, not “Claude beats every short JSON leaderboard”**—see **Agent SDK vs a Messages-centric OpenAI stack** below.
 
 **CEO framing:** the decision is **infrastructure for Q2 multi-agent**, not a “logo swap.” We recommend **parallel**, **frozen-task** proof before any cutover. The **recommended first project** in Part 3 serves **two goals at once**: **ship the Q2 workflow** and **keep today’s production stable**—literature, data, and hypothesis run as **Agent SDK subagents + MCP + hooks + sessions**, so your team spends depth on **RAG, sponsor policy, and Hypothesis deliverable contracts** instead of another bespoke tool loop. **Three Anthropic pillars** anchor the architecture: **[Citations](https://docs.anthropic.com/en/docs/build-with-claude/citations)** for passage-grounded evidence, **sessions and long-context** for durable `ResearchTask` threads, and the **Agent SDK** as the **native** orchestration surface (the same loop family as Claude Code). **Parallel literature and data** address the usual sequential bottleneck—wall time moves toward the **max** of independent legs, not always the **sum**.
 
 ### How to read this briefing
 
-1. **Part 1** — **why the Agent SDK** (including **vs a GPT‑5.1‑centric stack**), then models, routing, primitives, and reliability.  
-2. **Part 2** — a **six-dimension** evaluation design with Braintrust and a two-week cadence.  
+1. **Part 1** — **why the Agent SDK** (including **vs a Messages-centric OpenAI stack**—your **GPT‑5 / GPT‑5‑mini** lanes—and how that differs from **Gemini 3** or Claude at the **model** layer alone), then models, routing, primitives, and reliability.  
+2. **Part 2** — a **four-pillar** evaluation design (structured outputs, citations, long-context reasoning, end-to-end cost) with Braintrust and a two-week cadence—**multi-vendor** when you wire **Gemini 3** and OpenAI into the same frozen rows.  
 3. **Part 3** — the **recommended first project**: Q2 multi-agent workflow on the Agent SDK.
 
 ---
 
 ## Part 1 — Claude’s differentiators for NovaMind’s use case
 
-Part 1 is the **technical rationale** for the **recommended architecture** in Part 3: **why the Agent SDK addresses NovaMind’s workflow in a different layer than “GPT‑5.1 vs Claude,”** then models, routing, Agent SDK vs raw API, subagents, structured outputs for the **Hypothesis deliverable**, reliability (citations, permissions, thinking), hooks, sessions, MCP, Skills, and observability—each ties to a **concrete guardrail or latency** decision in that project.
+Part 1 is the **technical rationale** for the **recommended architecture** in Part 3: **why the Agent SDK addresses NovaMind’s workflow in a different layer than “which frontier model tops a chat benchmark,”** then models, routing, Agent SDK vs raw API, subagents, structured outputs for the **Hypothesis deliverable**, reliability (citations, permissions, thinking), hooks, sessions, MCP, Skills, and observability—each ties to a **concrete guardrail or latency** decision in that project.
 
-## Agent SDK vs a GPT‑5.1‑centric stack
+## Agent SDK vs a Messages-centric OpenAI stack (GPT‑5 / GPT‑5‑mini)
 
-Frontier models—including **GPT‑5.1**—raise the quality ceiling on **Messages-style** work: reasoning, tool use, and JSON in a **single** managed transcript. **NovaMind’s** product is closer to a **long-running, multi-lane research system**: **PubMed-heavy** retrieval, **sponsor-scoped** numeric work, and a downstream **Hypothesis deliverable** contract, often **in parallel**, with **audit** and **tenant** boundaries. That gap is mostly **harness**, not **IQ per token**.
+Frontier models on **OpenAI’s GPT‑5 class**—**GPT‑5** with **GPT‑5‑mini** where you route lighter work—and comparable **Messages-style** APIs elsewhere (including **Gemini** where you adopt them) raise the quality ceiling on **single-transcript** work: reasoning, tool use, and JSON in one thread. **NovaMind’s** product is closer to a **long-running, multi-lane research system**: **PubMed-heavy** retrieval, **sponsor-scoped** numeric work, and a downstream **Hypothesis deliverable** contract, often **in parallel**, with **audit** and **tenant** boundaries. That gap is mostly **harness**, not **IQ per token**.
 
-**What stays in your engineering scope with a GPT‑5.1‑centric pattern:** you still implement and operate the **orchestration loop** (when to call tools, how to retry, how to merge parallel legs), **context growth** when many abstracts and tables flow through one parent thread, **schema discipline after many tool results**, **per-tenant auth** at every tool boundary, and **telemetry** that attributes cost and latency to **customer** and **`research_task_id`**. A stronger base model improves **median** answer quality; it does not by itself deliver **governed multi-agent** shape.
+**What stays in your engineering scope with a Messages-centric OpenAI pattern (GPT‑5 / GPT‑5‑mini or successors):** you still implement and operate the **orchestration loop** (when to call tools, how to retry, how to merge parallel legs), **context growth** when many abstracts and tables flow through one parent thread, **schema discipline after many tool results**, **per-tenant auth** at every tool boundary, and **telemetry** that attributes cost and latency to **customer** and **`research_task_id`**. A stronger base model improves **median** answer quality; it does not by itself deliver **governed multi-agent** shape.
 
 **What Anthropic puts on the product surface with the Agent SDK:** the same **managed tool loop** we use in **Claude Code** ([Agent SDK overview](https://docs.anthropic.com/en/agent-sdk/overview))—**subagents** for isolation and parallelism ([Subagents](https://docs.anthropic.com/en/agent-sdk/subagents)), **structured outputs** for contracts **across** tool trajectories ([Structured outputs](https://docs.anthropic.com/en/docs/build-with-claude/structured-outputs)), **hooks** and **permissions** for enforcement ([Hooks](https://docs.anthropic.com/en/agent-sdk/hooks), [Configure permissions](https://code.claude.com/docs/en/agent-sdk/permissions)), **sessions** for durable tasks ([Sessions](https://docs.anthropic.com/en/agent-sdk/sessions)), **MCP** for **PubMed RAG and sponsor systems** ([MCP](https://docs.anthropic.com/en/agent-sdk/mcp)), **Skills** for reusable domain instruction ([Skills](https://docs.anthropic.com/en/agent-sdk/skills)), and **Citations** on native paths for grounded passages ([Citations](https://docs.anthropic.com/en/docs/build-with-claude/citations)).
 
 **Why we think that is preferable for NovaMind:** it **separates** “which frontier model answers this sub-question?” from “how does a regulated **Hypothesis deliverable** pipeline behave under load?” It makes **parallel literature and data** a **native** pattern instead of a custom orchestrator. It aligns **compliance** with **code-level** hooks and tool allowlists, not prompt honor systems alone. And it gives you a **stable evaluation story**: **raw API** JSON (where another vendor may lead) versus **SDK-enforced** JSON **after** tools—Part 2’s **Sub-test A vs B** split.
 
-**On GPT‑5.1 specifically:** Anthropic does not ask you to ignore strong results on **short** structured-output or chat benchmarks. We ask you to score **the same frozen `ResearchTask` rows** on the **surface your customers actually receive**—validated **Hypothesis deliverable** output after **real** PubMed and sponsor tool traffic. That is the **preferability** claim in one sentence: **less unbounded custom harness risk per accepted Hypothesis deliverable.**
+**On OpenAI and Gemini specifically:** Anthropic does not ask you to ignore strong results on **short** structured-output or chat benchmarks for **GPT‑5**, **GPT‑5‑mini**, or **Gemini 3**. We ask you to score **the same frozen `ResearchTask` rows** on the **surface your customers actually receive**—validated **Hypothesis deliverable** output after **real** PubMed and sponsor tool traffic. That is the **preferability** claim in one sentence: **less unbounded custom harness risk per accepted Hypothesis deliverable.**
 
 **OpenAI-compatible endpoints** are useful for **comparison spikes**; production features that need **citations, native structured outputs, and caching** belong on **native** Claude with the Agent SDK—see **[OpenAI SDK compatibility](https://docs.anthropic.com/en/api/openai-sdk#important-openai-compatibility-limitations)**.
 
@@ -95,8 +95,8 @@ Agent SDK **structured outputs** aim to return **validated JSON** for a declared
 
 **Two-track comparison:**
 
-- **Sub-test A (raw APIs):** Messages API / JSON mode / function calling on both vendors—**accept** if internal benchmarks show another vendor ahead here.  
-- **Sub-test B (SDK-enforced):** the same **Hypothesis deliverable** schema enforced in the Agent SDK layer—measure **violations**, **retries**, and **time-to-valid** after realistic tool trajectories.
+- **Sub-test A (raw APIs):** each vendor’s **Messages-style** surface—OpenAI (**GPT‑5 / GPT‑5‑mini** as you route them), Anthropic Messages, **Gemini 3** (or other models you include)—**accept** if internal benchmarks show another vendor ahead here.  
+- **Sub-test B (SDK-enforced, Claude path):** the same **Hypothesis deliverable** schema enforced in the **Agent SDK** layer—measure **violations**, **retries**, and **time-to-valid** after realistic tool trajectories. For **non-Claude** arms, define the closest **vendor-native** “schema after tools” path you will actually ship, or label the row **Claude-only** so the dashboard stays honest.
 
 ## Reliability — citations through permissions
 
@@ -158,7 +158,7 @@ Skills package domain instructions and resources with **progressive disclosure**
 
 **Concept:** **MCP** = your data plane; **subagents** = isolation and parallelism; **hooks + permissions** = enforcement; **sessions** = durability; **structured outputs + citations** = customer contract; **Skills** = domain SOPs; **OTLP** = finance-grade visibility—**one composable stack**.
 
-Compared to raw Messages API loops, the Agent SDK bundles the **managed tool cycle**, **hooks**, **permissions**, **sessions**, **MCP**, and **Skills** as **product-level** primitives. Subagents deliver **Q2-shaped** isolation for literature fan-out; the **[OpenAI Agents → Claude Agent SDK](https://platform.claude.com/cookbook/claude-agent-sdk-04-migrating-from-openai-agents-sdk)** cookbook accelerates engineer onboarding. **Citations** beat prompt-only “cite PMIDs” for auditability—**pair with** existence / passage / claim checks. **Life sciences:** we publish **Claude for life sciences** materials on **[anthropic.com](https://www.anthropic.com)**—**customer names** belong on **your** approved external materials. **Model and cloud optionality:** Bedrock, Vertex, Foundry, direct API—keep **`AgentDefinition.model`** explicit per lane.
+Compared to raw Messages API loops, the Agent SDK bundles the **managed tool cycle**, **hooks**, **permissions**, **sessions**, **MCP**, and **Skills** as **product-level** primitives. Subagents deliver **Q2-shaped** isolation for literature fan-out; the **[OpenAI Agents → Claude Agent SDK](https://platform.claude.com/cookbook/claude-agent-sdk-04-migrating-from-openai-agents-sdk)** cookbook accelerates engineer onboarding. **Citations** beat prompt-only “cite PMIDs” for auditability—**pair with** existence / passage / claim checks. **Life sciences:** we publish **Claude for life sciences** materials on **[anthropic.com](https://www.anthropic.com)**—**customer names** belong on **your** approved external materials. **Model and cloud optionality (board mandate):** NovaMind’s board wants **model-agnostic infrastructure**—here the direct answer is: **stable harness contracts** (MCP for data/tools, hooks + permissions for policy, sessions for durable state, structured outputs for deliverables) plus **explicit per-lane `AgentDefinition.model`** so you can swap **GPT‑5 / GPT‑5‑mini**, **Gemini 3**, or Claude **without rewriting orchestration** each time a SKU shifts; eval runs on **frozen rows** so new models drop in as **another arm**, not a rewrite. **Developer signal:** many NovaMind engineers already live in **Claude Code** daily—the same **managed tool loop**, permission ordering, and hook patterns map to the Agent SDK, so “switching cost” is **not** greenfield orchestration for that cohort. Bedrock, Vertex, Foundry, direct API—keep **`AgentDefinition.model`** explicit per lane.
 
 ---
 
@@ -166,7 +166,7 @@ Compared to raw Messages API loops, the Agent SDK bundles the **managed tool cyc
 
 ### Why this evaluation is shaped this way
 
-Leadership needs **production-relevant** signal, not generic chat leaderboards. Where it matters, compare **Sub-test A** (raw completion / JSON habits) with **Sub-test B** (Agent SDK **[structured outputs](https://docs.anthropic.com/en/docs/build-with-claude/structured-outputs)** with schema validation and retries) so “model conformance” is not confused with **system guarantees**.
+Leadership needs **production-relevant** signal, not generic chat leaderboards. NovaMind is comparing **Claude**, **OpenAI (GPT‑5 / GPT‑5‑mini)**, and **Gemini 3**—the methodology is **vendor-agnostic**: **the same frozen `ResearchTask` rows**, scorers, and dataset IDs should flow through **every arm** you include in Braintrust (or your scorer), so execs see one pane of glass, not a Claude-only side quest. Where it matters, compare **Sub-test A** (raw completion / JSON habits **per vendor**) with **Sub-test B** on the **Claude Agent SDK** path ( **[structured outputs](https://docs.anthropic.com/en/docs/build-with-claude/structured-outputs)** with schema validation and retries) and, for other vendors, the **closest shipped “schema after tools”** surface you will actually run—so “model conformance” is not confused with **system guarantees**.
 
 ### Four pillars — what to measure and why
 
@@ -184,7 +184,7 @@ Not a **forced migration** of the legacy stack; not a **comprehensive** LLM benc
 
 ### Two-week cadence (parallel to production)
 
-- **Days 1–2:** branch harness; **Hypothesis deliverable** schema → **Pydantic** / **Zod**; Braintrust on **both** arms; run **Sub-test A** and **Sub-test B** on the same frozen rows (batch overnight where eligible); scale **Sub-test B** toward **~1k** calls once stable.  
+- **Days 1–2:** branch harness; **Hypothesis deliverable** schema → **Pydantic** / **Zod**; Braintrust on **every vendor arm** (Claude, OpenAI, **Gemini 3** as wired); run **Sub-test A** on each and **Sub-test B** on the Agent SDK arm on the same frozen rows (batch overnight where eligible); scale **Sub-test B** toward **~1k** calls once stable.  
 - **Days 3–5:** citation battery—auto graders for existence/passage; queued judges for claim/adversarial rows.  
 - **Week 2 · Days 1–4:** build the **Agent SDK** prototype (3–4 agents, minimum hooks)—this is **Q2-shaped** work, not disposable code.  
 - **Week 2 · Days 5–7:** **50–100** end-to-end tasks—cost, **p95/p99**, quality vs baseline; optional concurrency slice.
@@ -195,17 +195,17 @@ If results are **mixed**, default response is often **per-lane routing** (**`Age
 
 ### Braintrust
 
-Run **both** arms through the **same** project, scorers, and frozen dataset IDs. Treat eval configs as **durable product assets**—wire into **PR/release** checks where practical so regressions surface early. Longer term, eval tools can become **MCP tools** inside the agent loop where policy allows.
+Run **every vendor arm** you care about (Claude Agent SDK, OpenAI **GPT‑5 / GPT‑5‑mini**, **Gemini 3**, others) through the **same** project, scorers, and frozen dataset IDs. Treat eval configs as **durable product assets**—wire into **PR/release** checks where practical so regressions surface early. Longer term, eval tools can become **MCP tools** inside the agent loop where policy allows.
 
 ### Decision gate and compatibility
 
-Ship Q2 on Agent SDK when **citation pillar**, **Sub-test B**, and **$/task** (under realistic cache/batch assumptions from **your** traces) all clear **parity-or-better** bars you predefine; otherwise expand harness work—not customer traffic. Map OpenAI Agents primitives with the **[migration cookbook](https://platform.claude.com/cookbook/claude-agent-sdk-04-migrating-from-openai-agents-sdk)**; **[OpenAI SDK compatibility](https://docs.anthropic.com/en/api/openai-sdk)** omits **`strict`**, **hoists** system/developer messages, and is not a substitute for **native** citations/caching—graduate proven spikes accordingly.
+Ship Q2 on Agent SDK when **citation pillar**, **Sub-test B** (Claude Agent SDK path), and **$/task** (under realistic cache/batch assumptions from **your** traces) all clear **parity-or-better** bars you predefine—measured on the **same frozen rows** across **every vendor arm** you include (**OpenAI GPT‑5 / GPT‑5‑mini**, **Gemini 3**, Claude), so the gate is not Claude-only theater; otherwise expand harness work—not customer traffic. Map OpenAI Agents primitives with the **[migration cookbook](https://platform.claude.com/cookbook/claude-agent-sdk-04-migrating-from-openai-agents-sdk)**; **[OpenAI SDK compatibility](https://docs.anthropic.com/en/api/openai-sdk)** omits **`strict`**, **hoists** system/developer messages, and is not a substitute for **native** citations/caching—graduate proven spikes accordingly.
 
 ---
 
 ## Part 3 — Recommended first project — strategic framing
 
-The recommended first project is **not** “migrate everything.” It is **NovaMind’s Q2 multi-agent research workflow on the Agent SDK** in parallel: additive for technical leadership, aligned to board velocity for executive leadership.
+The recommended first project is **not** “migrate everything.” It is **NovaMind’s Q2 multi-agent research workflow on the Agent SDK** in parallel: additive for technical leadership, aligned to **board velocity** on **model-agnostic** infra for executive leadership. **Gemini 3** and **OpenAI** stay in the **same** frozen-task eval—this path does not ask the board to ignore them.
 
 **OpenAI-compatible spikes** must respect **[documented limitations](https://docs.anthropic.com/en/api/openai-sdk#important-openai-compatibility-limitations)**; production features that need **citations, structured outputs, caching, and permission depth** belong on **native** Agent SDK paths.
 
@@ -233,7 +233,7 @@ The slides summarize lanes; here is the **implementation intent** behind each ro
 
 ## Closing · OpenAI-only vs Agent SDK
 
-**OpenAI-only** is coherent when **your** harness already delivers **multi-agent isolation, citation-grade governance, and eval coverage** at acceptable cost. If **Q2** needs new orchestration depth, compare **Agent SDK primitives** to the **full cost** of maintaining custom loops, audit hooks, and session infra in-house. **Public benchmarks** are **directional**; **your** own **frozen eval rows and scoring rubric**—not leaderboard scores—should anchor go/no-go. **Model optionality** in the SDK (**per-subagent** model choice across supported routes—see [Subagents](https://docs.anthropic.com/en/agent-sdk/subagents)) preserves flexibility without re-architecting on every SKU shift.
+**OpenAI-only** (or **Gemini-only**) is coherent when **your** harness already delivers **multi-agent isolation, citation-grade governance, and eval coverage** at acceptable cost. If **Q2** needs new orchestration depth, compare **Agent SDK primitives** to the **full cost** of maintaining custom loops, audit hooks, and session infra in-house. **Public benchmarks** are **directional**; **your** own **frozen eval rows and scoring rubric**—not leaderboard scores—should anchor go/no-go. **Board mandate (model agnosticism):** the SDK’s **per-subagent `model`** (see [Subagents](https://docs.anthropic.com/en/agent-sdk/subagents)) plus **MCP-defined** data/tools means you standardize on **workflow contracts** first and treat **GPT‑5**, **GPT‑5‑mini**, **Gemini 3**, and Claude as **interchangeable engines per lane** on evidence—not a monolithic “one model everywhere” rewrite on every SKU shift.
 
 ---
 

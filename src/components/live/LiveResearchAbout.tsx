@@ -53,7 +53,7 @@ export function LiveResearchAbout({
         </p>
       </details>
       <details className="live-research-about-details">
-        <summary className="live-research-about-summary">Why Agent SDK vs GPT‑5.1 / Gemini API-only paths</summary>
+        <summary className="live-research-about-summary">Why Agent SDK vs OpenAI GPT‑5 series / Gemini API-only paths</summary>
         <p className="link-inline-note live-research-about-honesty" style={{ marginBottom: 10 }}>
           This is an <strong>integration</strong> story, not a claim that one base model wins every benchmark. OpenAI and Google expose capable models; teams still own{' '}
           <strong>how</strong> multi-step tool use, delegation, and observability are wired. Anthropic documents the Agent SDK as the same{' '}
@@ -74,7 +74,10 @@ export function LiveResearchAbout({
             <a className="live-research-doc-link" href="https://docs.anthropic.com/en/agent-sdk/overview" target="_blank" rel="noreferrer">
               overview: Agent SDK vs client SDK
             </a>
-            ). A typical GPT‑5.1 or Gemini production stack does the same <em>by hand</em> on those vendors&apos; HTTP APIs: your service owns retries, state, and delegation wiring. For the Claude path, <code className="live-research-inline-code">query()</code> centralizes that harness so NovaMind ships less bespoke orchestration code per model route.
+            ). A typical <strong>OpenAI GPT‑5-class</strong> or <strong>Gemini</strong> production stack does the same <em>by hand</em> on those
+            vendors&apos; HTTP APIs: your service owns retries, state, and delegation wiring. For the Claude path,{' '}
+            <code className="live-research-inline-code">query()</code> centralizes that harness so NovaMind ships less bespoke orchestration code per
+            model route.
           </li>
           <li>
             <strong>Built-in tools + MCP</strong> — The SDK ships Claude Code-style tools (Read, Bash, Glob, Grep, WebSearch, …) and first-class{' '}

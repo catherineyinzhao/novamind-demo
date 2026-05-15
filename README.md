@@ -4,7 +4,7 @@ Vite + React + TypeScript UI with the **cream / ink / terra** palette from the o
 
 Trace dashboard URLs are built in `src/lib/traceUrls.ts`; observability ids are persisted in `localStorage` (keys are **not** stored).
 
-## Why Claude Agent SDK (vs only GPT‑5.1 / Gemini APIs)
+## Why Claude Agent SDK (vs only OpenAI GPT‑5 / Gemini APIs)
 
 This is about **orchestration surface area**, not a single-model scoreboard. With typical **chat-completions + tools** integrations (OpenAI, Google, or Anthropic’s own Messages client), **you** usually own the multi-turn tool loop, delegation boundaries, and glue for observability. Anthropic documents the **Claude Agent SDK** as the same **tools, agent loop, and context management that power Claude Code**, as a TypeScript/Python library — including **built-in tools** (Read, Bash, Glob, Grep, …), **MCP** servers, **subagents** via the Agent tool, **hooks**, **permissions**, and **sessions** ([Agent SDK overview](https://docs.anthropic.com/en/agent-sdk/overview)). The TypeScript package also **bundles the Claude Code-class native binary** for your platform so you do not install Claude Code separately for the harness to run.
 

@@ -44,7 +44,9 @@ export function NovaMindProtocolChecklist({ runMode }: { runMode: AgentRunMode }
             <strong>Latency &amp; cost</strong> — measure p50/p95 wall time and $/successful run on identical workloads; phase-level timings in this UI illustrate where time goes in one Claude Agent SDK run only.
           </li>
           <li>
-            <strong>Migration</strong> — start with one vertical (e.g. hypothesis + citation audit); keep GPT‑5.1 on other routes until rubrics stabilize — board gets model optionality without a big-bang rewrite.
+            <strong>Migration</strong> — start with one vertical (e.g. hypothesis + citation audit); keep{' '}
+            <strong>OpenAI (GPT‑5 / GPT‑5‑mini)</strong> or <strong>Gemini</strong> on other routes until rubrics stabilize — board gets model optionality
+            without a big-bang rewrite.
           </li>
         </ul>
       </details>
