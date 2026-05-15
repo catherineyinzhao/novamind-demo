@@ -4,12 +4,9 @@ Anthropic · Executive briefing for NovaMind CEO / CTO — Claude and the Agent 
 
 Terms: Claude is our family of models (Opus / Sonnet / Haiku). The Agent SDK is our library (TypeScript and Python) that runs a multi-step agent loop for you: Claude proposes tool calls (read files, run commands, call your APIs), your process executes them, Claude sees results, repeats until done—same pattern as Claude Code, but embedded in your backend ([Agent SDK overview](https://docs.anthropic.com/en/agent-sdk/overview)).
 
-Dollar, percent, and benchmark numbers should come from your production traces and finance models; below we focus on architecture, product primitives, and an evaluation path you can run in parallel with today’s stack.
-
 - **Part 1** — Differentiators: Agent SDK primitives and reliability for a governed research workflow.
 - **Part 2** — Evaluation: what to test, how to instrument (e.g. Braintrust), parallel timeline vs today’s stack.
 - **Part 3** — Recommended first project: framing and concrete multi-agent architecture.
-- **Appendix** — Prior vocabulary / mitigation reference.
 
 ---
 
@@ -17,7 +14,7 @@ Dollar, percent, and benchmark numbers should come from your production traces a
 
 **Plain English:** **Subagents** = delegate to a **child Claude** so long retrieval traces do not swamp the parent; **Sessions** = **save and resume** multi-step jobs; **Hooks** = **your code** that can **block or log** sensitive tools **before** they run.
 
-**Strategic setup — how this connects to Part 3:** the recommended architecture optimizes for **two constraints at once**: ship the **Q2 multi-agent research workflow** without destabilizing **today’s production** stack. Nothing in that path needs to touch existing customer traffic until eval gates pass. NovaMind’s familiar lanes—**literature review**, **sponsor-scoped data analysis**, **hypothesis generation**—become **first-class Agent SDK primitives** (subagents, MCP, hooks, sessions, structured outputs) instead of bespoke orchestration glue; **infra-heavy** concerns (tool cycles, permission checks, persistence, telemetry hooks) sit in the **SDK layer**, so engineering hours concentrate on **RAG quality, sponsor ACLs, and `HypothesisPack` semantics**—the product.
+**Strategic setup — how this connects to Part 3:** the recommended architecture optimizes for **two constraints at once**: ship the **Q2 multi-agent research workflow** without destabilizing **today’s production** stack. Nothing in that path needs to touch existing customer traffic until eval gates pass. NovaMind’s familiar lanes—**literature review**, **sponsor-scoped data analysis**, **hypothesis generation**—become **first-class Agent SDK primitives** (subagents, MCP, hooks, sessions, structured outputs) instead of bespoke orchestration glue; **infra-heavy** concerns (tool cycles, permission checks, persistence, telemetry hooks) sit in the **SDK layer**, so engineering hours concentrate on **RAG quality, sponsor ACLs, and Hypothesis deliverable semantics**—the product.
 
 **Three structural advantages — in the recommended project:**
 
@@ -29,7 +26,7 @@ Dollar, percent, and benchmark numbers should come from your production traces a
 
 ## Part 1 — Claude’s differentiators for NovaMind’s use case
 
-**What we cover:** how each Agent SDK primitive supports **`HypothesisPack`**, **PubMed RAG**, **sponsor data**, and **multi-tenant** delivery for the **recommended first project** in Part 3.
+**What we cover:** how each Agent SDK primitive supports the **Hypothesis deliverable** schema, **PubMed RAG**, **sponsor data**, and **multi-tenant** delivery for the **recommended first project** in Part 3.
 
 **If the Agent SDK is new to you:** picture **one long-running “research job”** as a **state machine**—many steps, many tools, possibly **parallel** branches—not a single chat reply. The SDK gives you **named building blocks** for that machine: **who runs the loop**, **which tools exist**, **who may call them**, **what gets logged**, **where state is saved**, and **how final JSON is validated**. **Models** pick *reasoning quality per step*; these primitives pick *whether the pipeline is operable at all* under load, tenants, and compliance.
 
@@ -47,9 +44,9 @@ Dollar, percent, and benchmark numbers should come from your production traces a
 
 **What the Agent SDK moves onto the product surface:** **built-in tool execution** for the standard research loop, **subagents** so heavy retrieval traces stay in **child** contexts ([Subagents](https://docs.anthropic.com/en/agent-sdk/subagents)), **structured outputs** tied to **Pydantic/Zod-style** contracts **across** tool turns ([Structured outputs](https://docs.anthropic.com/en/docs/build-with-claude/structured-outputs)), **hooks** for sandbox and audit ([Hooks](https://docs.anthropic.com/en/agent-sdk/hooks)), **permissions** with an explicit evaluation order ([Configure permissions](https://code.claude.com/docs/en/agent-sdk/permissions)), **sessions** for durable **`ResearchTask`** state ([Sessions](https://docs.anthropic.com/en/agent-sdk/sessions)), **MCP** for **PubMed RAG and sponsor data** as first-class tools ([MCP](https://docs.anthropic.com/en/agent-sdk/mcp)), and **Skills** for reusable domain packs ([Skills](https://docs.anthropic.com/en/agent-sdk/skills)). **Citations** sit on the **native** Claude path for passage-grounded extraction ([Citations](https://docs.anthropic.com/en/docs/build-with-claude/citations)). Together, that is the **governed multi-agent shape** Q2 is asking for—not a bigger monologue from a single thread.
 
-**Why that is *preferable* for NovaMind conceptually:** (1) **Separation of model and orchestration** — you can **benchmark models** on frozen tasks while the **Agent SDK** holds the **workflow contract** steady. (2) **Parallelism and isolation** — literature and sponsor-backed analysis become **first-class parallel subagents** with **least-privilege tools**, instead of one transcript absorbing **every** abstract and dataframe preview. (3) **Contract-first delivery** — **`HypothesisPack`** is enforced as **system behavior**, not as a **prompt request** after volatile tool traffic. (4) **Operational clarity** — the same primitives **OTLP**, **hooks**, and **session_id** semantics your SRE and compliance teams need are **first-class**, not re-invented per squad.
+**Why that is *preferable* for NovaMind conceptually:** (1) **Separation of model and orchestration** — you can **benchmark models** on frozen tasks while the **Agent SDK** holds the **workflow contract** steady. (2) **Parallelism and isolation** — literature and sponsor-backed analysis become **first-class parallel subagents** with **least-privilege tools**, instead of one transcript absorbing **every** abstract and dataframe preview. (3) **Contract-first delivery** — the **Hypothesis deliverable** schema is enforced as **system behavior**, not as a **prompt request** after volatile tool traffic. (4) **Operational clarity** — the same primitives **OTLP**, **hooks**, and **session_id** semantics your SRE and compliance teams need are **first-class**, not re-invented per squad.
 
-**Fair comparison on benchmarks:** if **GPT‑5.1** leads on **one-shot** or **raw API** structured-output suites, that is **compatible** with our story: those suites usually measure **Sub-test A**-shaped surfaces (see the structured-output slide). NovaMind’s production bar is closer to **Sub-test B**—**schema after real PubMed and sponsor tool traffic**—which is **exactly** what Agent SDK structured outputs are designed for. The right exec question is not “which model tops a short JSON leaderboard?” but “**which stack minimizes combined** model + orchestration + compliance **risk per accepted `HypothesisPack`?**”
+**Fair comparison on benchmarks:** if **GPT‑5.1** leads on **one-shot** or **raw API** structured-output suites, that is **compatible** with our story: those suites usually measure **Sub-test A**-shaped surfaces (see the structured-output slide). NovaMind’s production bar is closer to **Sub-test B**—**schema after real PubMed and sponsor tool traffic**—which is **exactly** what Agent SDK structured outputs are designed for. The right exec question is not “which model tops a short JSON leaderboard?” but “**which stack minimizes combined** model + orchestration + compliance **risk per accepted Hypothesis deliverable?**”
 
 **If you stay on GPT‑5.1 for the model layer:** you can still **evaluate Agent SDK + Claude in parallel** on frozen **`ResearchTask`** rows (Part 2)—the outcome informs **harness choice** independent of **single-model loyalty**. Many teams end up with **multi-model** routing; the Agent SDK’s per-lane **`model`** on **`AgentDefinition`** is built for that shape.
 
@@ -63,7 +60,7 @@ Dollar, percent, and benchmark numbers should come from your production traces a
 
 | Tier | Role in the recommended stack | When to use it for NovaMind-shaped work |
 | --- | --- | --- |
-| **Claude Opus** (flagship) | Hypothesis generation sub-agent where reasoning depth matters most | **`HypothesisPack`** synthesis that must trace evidence across long memos |
+| **Claude Opus** (flagship) | Hypothesis generation sub-agent where reasoning depth matters most | **Hypothesis deliverable** JSON synthesis that must trace evidence across long memos |
 | **Claude Sonnet** (workhorse) | Literature review + data analysis sub-agents; coordinator | PubMed-heavy retrieval, cohort validation, orchestration—**cost / latency balance** |
 | **Claude Haiku** (fast) | Routing, classification, lighter extraction | Tasks that today might sit on a **small** frontier model—**benchmark latency on your workload** |
 
@@ -147,9 +144,9 @@ Each **`AgentDefinition`** carries `description`, `prompt`, `tools`, `disallowed
 Raw API **structured output** benchmarks measure a **different surface** than **Agent SDK schema-enforced** outputs across a **full tool trajectory**.
 
 - **Sub-test A — raw API:** OpenAI vs Anthropic **Messages** + JSON / function-calling—this is where another vendor may lead on **raw** JSON surfaces and deserves a fair comparison.
-- **Sub-test B — SDK-enforced:** same **`HypothesisPack`** (or production schema) via Agent SDK **structured outputs**—measure **schema violation rate**, **retry count**, **time-to-valid JSON** **after** tool rounds.
+- **Sub-test B — SDK-enforced:** same **Hypothesis deliverable** (or production schema) via Agent SDK **structured outputs**—measure **schema violation rate**, **retry count**, **time-to-valid JSON** **after** tool rounds.
 
-**Bottom line:** downstream biotech automation needs **`HypothesisPack`** reliable **after** PubMed + sponsor tools—not only on a one-shot completion.
+**Bottom line:** downstream biotech automation needs **Hypothesis deliverable** JSON that stays reliable **after** PubMed + sponsor tools—not only on a one-shot completion.
 
 ---
 
@@ -167,11 +164,11 @@ Raw API **structured output** benchmarks measure a **different surface** than **
 
 **Concept:** **`strict: true`** in some OpenAI-style tool schemas asks the **API** to enforce JSON shape. Anthropic’s **OpenAI-compatible shim** documents that **`strict` is ignored**—so “drop-in” compatibility **does not** move Sub-test B onto that path.
 
-Agent SDK **structured outputs** follow the native **[Structured outputs](https://docs.anthropic.com/en/docs/build-with-claude/structured-outputs)** path—validated JSON for **`HypothesisPack`** **after** tool rounds (Sub-test B above).
+Agent SDK **structured outputs** follow the native **[Structured outputs](https://docs.anthropic.com/en/docs/build-with-claude/structured-outputs)** path—validated JSON for **Hypothesis deliverable** **after** tool rounds (Sub-test B above).
 
 **OpenAI SDK compatibility:** our **[OpenAI SDK compatibility](https://docs.anthropic.com/en/api/openai-sdk)** layer **ignores `strict`**—tool JSON there is **not** schema-guaranteed. For **guaranteed** conformance, use **native Claude + Structured Outputs** with the Agent SDK.
 
-**Week 1 cadence:** express **`HypothesisPack`** in **Pydantic** / **Zod** and run **~1k** Sub-test B calls—track **schema violation rate**, **retries**, and **time-to-valid JSON** on frozen tasks.
+**Week 1 cadence:** express the **Hypothesis deliverable** schema in **Pydantic** / **Zod** and run **~1k** Sub-test B calls—track **schema violation rate**, **retries**, and **time-to-valid JSON** on frozen tasks.
 
 ---
 
@@ -438,11 +435,7 @@ A **`drug-discovery-research`**-style skill can package PubMed query patterns, e
 
 ---
 
-## Part 3 — Recommended first project — full detail
-
----
-
-## Part 3 · The strategic framing
+## Part 3 · Recommended first project — strategic framing
 
 **Not a migration story first:** ship **NovaMind’s Q2 multi-agent research workflow** **natively** on the Agent SDK on a **parallel** branch.
 
@@ -462,12 +455,12 @@ A **`drug-discovery-research`**-style skill can package PubMed query patterns, e
 
 | Agent | Model class | Tools | Output to downstream |
 | --- | --- | --- | --- |
-| **Coordinator** | Sonnet-class | Delegates via **`Agent`** tool; owns merge narrative | Final **`HypothesisPack`** / report assembly |
+| **Coordinator** | Sonnet-class | Delegates via **`Agent`** tool; owns merge narrative | Final **Hypothesis deliverable** / report assembly |
 | **Literature review** | Sonnet-class | **WebSearch**, **WebFetch**, **Read**, **Grep** + **MCP → your PubMed RAG** | Structured JSON: papers, findings, citation objects, confidence |
 | **Data analysis** | Sonnet-class | **Bash**, **Read**, **Write** (**sandbox dir only**—enforce with **`PreToolUse`**) + **MCP → sponsor data** | Stats summaries, anomaly flags, data-quality JSON |
-| **Hypothesis generation** | Opus-class | **Read**-only on upstream JSON memos | **`HypothesisPack`** with evidence chain + confidence + suggested next experiments |
+| **Hypothesis generation** | Opus-class | **Read**-only on upstream JSON memos | **Hypothesis deliverable** (JSON): evidence chain + confidence + suggested next experiments |
 
-**Coordinator (Sonnet-class)** — Ingests the customer **`ResearchTask`**, decomposes into workstreams, launches **literature** and **data** subagents **in parallel** when their inputs do not depend on each other, merges their **typed JSON**, invokes **hypothesis**, and returns a final **`HypothesisPack`**. **Why Sonnet, not Opus, here:** orchestration and structured delegation sit on the **critical path for every job**; depth belongs in the hypothesis lane. Keep the coordinator **system prompt small** (routing, merge rules, output schema)—**domain science** lives in child prompts so the parent context stays lean. Declare **`HypothesisPack`** (and nested types such as evidence rows and statistical summaries) with **Pydantic** / **Zod** and wire them through Agent SDK **structured outputs** so the framework validates JSON **across tool turns**, not only on a one-shot completion.
+**Coordinator (Sonnet-class)** — Ingests the customer **`ResearchTask`**, decomposes into workstreams, launches **literature** and **data** subagents **in parallel** when their inputs do not depend on each other, merges their **typed JSON**, invokes **hypothesis**, and returns a final **Hypothesis deliverable**. **Why Sonnet, not Opus, here:** orchestration and structured delegation sit on the **critical path for every job**; depth belongs in the hypothesis lane. Keep the coordinator **system prompt small** (routing, merge rules, output schema)—**domain science** lives in child prompts so the parent context stays lean. Declare the **Hypothesis deliverable** schema (and nested types such as evidence rows and statistical summaries) with **Pydantic** / **Zod** and wire them through Agent SDK **structured outputs** so the framework validates JSON **across tool turns**, not only on a one-shot completion.
 
 **Literature review (Sonnet + MCP to PubMed RAG)** — **Keep** the corpus pipeline you already run; expose **PubMed ~3y** as an **[MCP](https://docs.anthropic.com/en/agent-sdk/mcp)** server (for example `mcp__pubmed-rag__search`). The agent calls MCP for ranked chunks / metadata and uses **Read** / **Grep** where files land on disk. Pair factual extractions with **[Citations](https://docs.anthropic.com/en/docs/build-with-claude/citations)** so `passage` fields are **grounded in source text**—Part 2’s **citation pillar** (existence / passage / claim) is the eval contract. **Tool allowlist:** retrieval-oriented tools plus MCP—**omit Write / Bash** so hostile abstracts cannot pivot to shell or arbitrary writes (**defense in depth** with [permissions](https://docs.anthropic.com/en/agent-sdk/permissions)). **Isolation:** dozens of abstract reads stay in the **child** transcript; the coordinator receives a **compact evidence list** ([Subagents](https://docs.anthropic.com/en/agent-sdk/subagents)).
 
@@ -493,33 +486,9 @@ A **`drug-discovery-research`**-style skill can package PubMed query patterns, e
 
 **Custom orchestration:** staying on raw chat-completions usually means **you** own **tool loops, audit hooks, session persistence, and per-lane routing**—that is **engineering, SRE, and compliance** cost on top of **$/1M tokens**.
 
-**Public benchmarks:** leaderboards are **directional**; they rarely match regulated **`HypothesisPack`** work. **Your** frozen **`ResearchTask`** rubric is the authority for go/no-go.
+**Public benchmarks:** public leaderboards are **directional**; they rarely mirror **regulated, tool-heavy** **Hypothesis deliverable** work in your product. Treat **your** own **frozen eval rows and board-agreed scoring rubric**—the same cases you already use for release or customer-facing QA—as the authority for go/no-go, not generic benchmark tables.
 
-**Model optionality:** **`AgentDefinition.model`** plus supported cloud routes let you **swap lanes on evidence** without redesigning the orchestration layer each time a frontier SKU shifts.
-
----
-
-## Appendix · Prior vocabulary (mitigation rows A–E)
-
-| Row | Concern | Where we cover it |
-| --- | --- | --- |
-| **A** | Parent coherence under PubMed-heavy tools | Part 1 **Subagents** + built-in/MCP bridge |
-| **B** | **`HypothesisPack` after many tools** | Part 1 **Structured outputs**; Part 2 **structured-output pillar** |
-| **C** | Citations & sponsor governance | Part 1 **Hooks** + **MCP**; Part 2 **citation pillar** |
-| **D** | Fair migration vs OpenAI | Part 2 **paired Sub-test A/B** + frozen-task framing |
-| **E** | Decision-grade eval signal | Part 2 **four pillars** + timeline + **Braintrust** |
-
----
-
-## Next steps
-
-| Next step | Lead |
-| --- | --- |
-| Own eval pillars + Braintrust project | Eval lead + research PM |
-| Build Agent SDK prototype + hooks | Platform / ML infra |
-| Port `HypothesisPack` schema + validators | Product eng |
-| OTLP → LangSmith (or collector) | Observability owner |
-| Exec readout | CEO staff + CTO |
+**Model optionality:** the Agent SDK is designed for **different models per subagent** and for running across **supported cloud and direct API routes**—see **[Subagents](https://docs.anthropic.com/en/agent-sdk/subagents)**—so you can **change which SKU powers a lane** (coordinator vs literature vs hypothesis) on evidence without redesigning the whole orchestration layer every time a frontier model ships.
 
 ---
 
