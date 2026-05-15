@@ -193,7 +193,8 @@ body {
 }
 
 .tpane.active > .live-layout,
-.tpane.active > .pipe-page {
+.tpane.active > .pipe-page,
+.tpane.active > .leadership-presentation-root {
   flex: 1;
   min-height: 0;
   overflow: hidden;
@@ -774,6 +775,12 @@ body {
   border-top: 1px solid var(--bm);
 }
 
+.protocol-checklist--nested {
+  margin: 10px 0 0;
+  padding-top: 4px;
+  border-top: 1px dashed color-mix(in srgb, var(--bm) 80%, transparent);
+}
+
 .live-feed-caption {
   flex-shrink: 0;
   margin: 0;
@@ -811,6 +818,33 @@ body {
   margin: 0;
   padding: 0 0 2px;
   font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--stone);
+  line-height: 1.35;
+}
+
+.live-phase-rail-wall {
+  margin: 0;
+  font-size: 9px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--ink2);
+  line-height: 1.35;
+}
+
+.live-phase-duration {
+  font-weight: 500;
+  color: var(--stone);
+}
+
+.live-stats-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.live-stats-phase-wall {
+  margin: 0;
+  font-size: 9px;
   font-family: 'JetBrains Mono', monospace;
   color: var(--stone);
   line-height: 1.35;
@@ -1174,6 +1208,16 @@ body {
   word-break: break-word;
 }
 
+.live-research-doc-link {
+  color: var(--terra);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.live-research-doc-link:hover {
+  color: var(--ink);
+}
+
 .live-harness-advanced {
   margin-top: 8px;
   margin-bottom: 4px;
@@ -1280,6 +1324,340 @@ body {
   border-left: 3px solid var(--blue);
 }
 
+/* Pipeline: which actor produced this card (from server actorPhase) */
+.agent-block--actor-orchestrator {
+  background: color-mix(in srgb, var(--ink) 5%, var(--cream));
+}
+.agent-block--actor-literature {
+  background: color-mix(in srgb, var(--terra) 8%, var(--cream));
+}
+.agent-block--actor-data {
+  background: color-mix(in srgb, var(--blue) 7%, var(--cream));
+}
+.agent-block--actor-hypothesis {
+  background: color-mix(in srgb, var(--amber) 8%, var(--cream));
+}
+.agent-block--actor-citation {
+  background: color-mix(in srgb, #4a6b4d 10%, var(--cream));
+}
+
+/* Full-width phase headers: orchestrator vs sub-agents */
+.agent-block--phase-mark {
+  border: 1px solid var(--bm);
+  border-radius: var(--rl);
+  overflow: hidden;
+  flex-shrink: 0;
+  animation: fi 0.2s ease;
+  background: color-mix(in srgb, var(--sand) 55%, var(--cream));
+}
+
+.agent-block--mark-orchestrator {
+  border-left: 6px solid var(--ink);
+}
+
+.agent-block--mark-literature {
+  border-left: 6px solid var(--terra);
+}
+
+.agent-block--mark-data {
+  border-left: 6px solid var(--blue);
+}
+
+.agent-block--mark-hypothesis {
+  border-left: 6px solid var(--amber);
+}
+
+.agent-block--mark-citation {
+  border-left: 6px solid #4a6b4d;
+}
+
+.ab-phase-mark-hd {
+  padding: 10px 14px 4px;
+  font-family: 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', Palatino, Georgia, serif;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.ab-phase-mark-body {
+  padding: 0 14px 12px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--stone);
+}
+
+/* Orchestrator → sub-agent: explicit breakpoint before Agent tool_use */
+.agent-feed-delegate-ribbon {
+  margin: 16px 0 12px;
+  padding: 0 2px;
+  flex-shrink: 0;
+}
+
+.agent-feed-delegate-ribbon-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.agent-feed-delegate-ribbon-sub {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 6px;
+}
+
+.agent-feed-delegate-ribbon-line {
+  flex: 1;
+  height: 1px;
+  background: color-mix(in srgb, var(--ink) 22%, transparent);
+}
+
+.agent-feed-delegate-ribbon-pill {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--terra);
+  white-space: nowrap;
+}
+
+.agent-feed-delegate-ribbon-cap {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink);
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid color-mix(in srgb, var(--terra) 55%, var(--bm));
+  background: color-mix(in srgb, var(--terra) 12%, var(--cream));
+}
+
+.agent-feed-delegate-ribbon-note {
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--stone);
+  padding-left: 2px;
+}
+
+/* Groups delegate ribbon + specialist panel so the Agent → sub-agent link reads as one unit */
+.feed-handoff-chain {
+  position: relative;
+  margin: 10px 0 26px;
+  padding: 0 0 2px 14px;
+  border-left: 2px dashed color-mix(in srgb, var(--ink) 20%, var(--bm));
+}
+
+.feed-handoff-chain--literature {
+  border-left-color: color-mix(in srgb, var(--terra) 55%, var(--bm));
+}
+
+.feed-handoff-chain--data {
+  border-left-color: color-mix(in srgb, var(--blue) 50%, var(--bm));
+}
+
+.feed-handoff-chain--hypothesis {
+  border-left-color: color-mix(in srgb, var(--amber) 50%, var(--bm));
+}
+
+.feed-handoff-chain--citation {
+  border-left-color: color-mix(in srgb, #4a6b4d 55%, var(--bm));
+}
+
+.feed-handoff-chain .agent-feed-delegate-ribbon {
+  margin: 0 0 2px;
+  padding-left: 0;
+}
+
+.feed-handoff-chain-bridge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 6px 0 12px;
+  max-width: 100%;
+}
+
+.feed-handoff-chain-bridge-line {
+  flex: 1;
+  min-width: 12px;
+  height: 1px;
+  background: color-mix(in srgb, var(--ink) 14%, transparent);
+}
+
+.feed-handoff-chain-bridge-label {
+  flex-shrink: 0;
+  max-width: min(22rem, 100%);
+  font-size: 10px;
+  line-height: 1.35;
+  text-align: center;
+  color: var(--stone);
+}
+
+.feed-handoff-chain .feed-subagent-run {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.agent-block--mark-literature + .feed-handoff-chain,
+.agent-block--mark-data + .feed-handoff-chain,
+.agent-block--mark-hypothesis + .feed-handoff-chain,
+.agent-block--mark-citation + .feed-handoff-chain {
+  margin-top: 4px;
+}
+
+.feed-subagent-run--chained {
+  margin-left: 0;
+}
+
+.agent-block--agent-delegate-tool {
+  border-width: 2px;
+  border-color: color-mix(in srgb, var(--terra) 45%, var(--bm));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--terra) 18%, transparent);
+}
+
+.agent-block--agent-delegate-tool .ab-hd {
+  background: color-mix(in srgb, var(--terra) 14%, var(--cream));
+  border-bottom: 1px solid color-mix(in srgb, var(--terra) 25%, var(--bm));
+}
+
+.agent-block--agent-delegate-tool.tool .ab-tag {
+  background: color-mix(in srgb, var(--terra) 28%, var(--cream));
+  color: #4a3010;
+  letter-spacing: 0.1em;
+}
+
+/* Consecutive specialist blocks (same actorPhase): literal “card” around each sub-agent run */
+.feed-subagent-run {
+  margin: 18px 0 22px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--ink) 14%, var(--bm));
+  border-radius: calc(var(--rl) + 2px);
+  background: var(--cream);
+  box-shadow:
+    0 1px 2px color-mix(in srgb, var(--ink) 6%, transparent),
+    0 4px 14px color-mix(in srgb, var(--ink) 5%, transparent);
+  overflow: hidden;
+}
+
+.feed-subagent-run--literature {
+  border-left: 6px solid var(--terra);
+}
+
+.feed-subagent-run--data {
+  border-left: 6px solid var(--blue);
+}
+
+.feed-subagent-run--hypothesis {
+  border-left: 6px solid var(--amber);
+}
+
+.feed-subagent-run--citation {
+  border-left: 6px solid #4a6b4d;
+}
+
+.feed-subagent-run-hd {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--bm);
+  background: color-mix(in srgb, var(--sand) 55%, var(--cream));
+}
+
+.feed-subagent-run-hd-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.feed-subagent-run-hd-sub {
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  line-height: 1.45;
+  color: var(--stone);
+}
+
+.feed-subagent-run--literature .feed-subagent-run-hd {
+  background: color-mix(in srgb, var(--terra) 14%, var(--cream));
+}
+
+.feed-subagent-run--data .feed-subagent-run-hd {
+  background: color-mix(in srgb, var(--blue) 12%, var(--cream));
+}
+
+.feed-subagent-run--hypothesis .feed-subagent-run-hd {
+  background: color-mix(in srgb, var(--amber) 14%, var(--cream));
+}
+
+.feed-subagent-run--citation .feed-subagent-run-hd {
+  background: color-mix(in srgb, #4a6b4d 12%, var(--cream));
+}
+
+.feed-subagent-run-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 12px 14px;
+  background: color-mix(in srgb, var(--sand) 22%, var(--cream));
+}
+
+.feed-subagent-run-body .agent-block {
+  margin: 0;
+}
+
+/* Orchestrator “lane”: groups main-thread text/tools between phase banners and specialist runs */
+.feed-orchestrator-run {
+  margin: 14px 0 18px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--ink) 10%, var(--bm));
+  border-radius: calc(var(--rl) + 1px);
+  border-left: 5px solid color-mix(in srgb, var(--stone) 55%, var(--ink));
+  background: color-mix(in srgb, var(--sand) 12%, var(--cream));
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--ink) 4%, transparent);
+  overflow: hidden;
+}
+
+.feed-orchestrator-run-hd {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--ink) 72%, var(--stone-lt));
+  margin: 0;
+  padding: 9px 14px;
+  border-bottom: 1px solid color-mix(in srgb, var(--ink) 8%, var(--bm));
+  background: color-mix(in srgb, var(--sand) 35%, var(--cream));
+}
+
+.feed-orchestrator-run-body {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 11px 12px 13px;
+  background: color-mix(in srgb, var(--sand) 8%, var(--cream));
+}
+
+.feed-orchestrator-run-body .agent-block {
+  margin: 0;
+}
+
+.feed-orchestrator-run-body .ab-hd,
+.feed-subagent-run-body .ab-hd {
+  font-size: 10px;
+  padding: 6px 10px;
+}
+
 @keyframes fi {
   from {
     opacity: 0;
@@ -1298,6 +1676,24 @@ body {
   gap: 8px;
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
+}
+
+.ab-tool-invoke-hint {
+  margin: 0;
+  padding: 6px 12px 8px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--stone);
+  border-bottom: 1px solid color-mix(in srgb, var(--ink) 8%, var(--bm));
+  background: color-mix(in srgb, var(--sand) 28%, var(--cream));
+}
+
+.ab-tool-invoke-hint .agent-md-p {
+  margin: 0;
+}
+
+.ab-tool-invoke-hint .agent-md-p + .agent-md-p {
+  margin-top: 0.35em;
 }
 
 .agent-block.thinking .ab-hd {
@@ -2723,6 +3119,684 @@ body {
 ::-webkit-scrollbar-thumb {
   background: var(--sand);
   border-radius: 2px;
+}
+
+/* ----- Leadership presentation tab (wrapper: Brief | Slides) ----- */
+.leadership-presentation-root {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--cream);
+}
+
+.leadership-presentation-switcher {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 10px 20px 0;
+  border-bottom: 1px solid var(--sand);
+}
+
+.leadership-presentation-switcher-btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 8px 14px;
+  margin-bottom: -1px;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  background: transparent;
+  color: var(--stone);
+  cursor: pointer;
+}
+
+.leadership-presentation-switcher-btn:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--surf) 80%, var(--cream));
+}
+
+.leadership-presentation-switcher-btn.active {
+  color: var(--ink);
+  background: var(--surf);
+  border-color: var(--sand);
+  border-bottom-color: var(--surf);
+  box-shadow: 0 -1px 0 var(--surf);
+}
+
+.leadership-presentation-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ----- Leadership presentation tab (markdown brief) ----- */
+.leadership-pres-root {
+  background: var(--cream);
+  color: var(--ink);
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.leadership-pres-suspense {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+}
+
+.leadership-pres-suspense-txt {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--stone);
+}
+
+.leadership-pres-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  max-width: 58rem;
+  margin: 0 auto;
+  padding: 22px 20px 40px;
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+  align-items: start;
+  scroll-behavior: smooth;
+}
+
+@media (min-width: 960px) {
+  .leadership-pres-layout {
+    grid-template-columns: 200px minmax(0, 1fr);
+    gap: 28px 40px;
+    padding: 24px 28px 48px;
+  }
+}
+
+.leadership-pres-toc {
+  position: sticky;
+  top: 10px;
+  align-self: start;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  padding: 12px 12px 14px;
+  border: 1px solid var(--bm);
+  border-radius: var(--r);
+  background: var(--surf);
+  box-shadow: 0 1px 0 rgba(42, 41, 32, 0.04);
+}
+
+.leadership-pres-toc-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--stone);
+  margin: 0 0 8px 2px;
+}
+
+.leadership-pres-toc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.leadership-pres-toc-li {
+  margin: 0 0 6px;
+}
+
+.leadership-pres-toc-a {
+  display: block;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--ink2);
+  text-decoration: none;
+  padding: 4px 6px;
+  border-radius: 4px;
+  border-left: 2px solid transparent;
+}
+
+.leadership-pres-toc-a:hover {
+  background: color-mix(in srgb, var(--sand) 55%, var(--surf));
+  color: var(--ink);
+  border-left-color: var(--terra);
+}
+
+.leadership-pres-article {
+  min-width: 0;
+  counter-reset: leadership-chapter;
+}
+
+.leadership-pres-source-card {
+  margin-top: 2rem;
+  padding: 12px 14px;
+  border: 1px solid var(--bm);
+  border-radius: var(--r);
+  background: var(--surf);
+}
+
+.leadership-pres-source-hint {
+  margin: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--stone);
+  line-height: 1.5;
+}
+
+.leadership-pres-source-code {
+  font-family: inherit;
+  font-size: inherit;
+  background: rgba(42, 41, 32, 0.06);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.leadership-pres-h1 {
+  font-family: 'Lora', serif;
+  font-size: 1.65rem;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0 0 0.75rem;
+  line-height: 1.25;
+  scroll-margin-top: 12px;
+}
+
+.leadership-pres-article > .leadership-pres-h1:first-child {
+  margin-top: 0;
+}
+
+.leadership-pres-h2 {
+  font-family: 'Lora', serif;
+  font-size: 1.22rem;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 2.5rem 0 0.75rem;
+  padding: 12px 14px 12px 16px;
+  line-height: 1.35;
+  border: 1px solid var(--bm);
+  border-left: 4px solid var(--terra);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surf) 88%, var(--cream));
+  scroll-margin-top: 12px;
+  counter-increment: leadership-chapter;
+}
+
+.leadership-pres-h2::before {
+  content: counter(leadership-chapter, decimal-leading-zero) ' · ';
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55em;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--terra);
+  vertical-align: 0.05em;
+}
+
+.leadership-pres-h2:first-of-type {
+  margin-top: 0.25rem;
+}
+
+.leadership-pres-h3 {
+  font-family: 'Lora', serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--ink2);
+  margin: 1.5rem 0 0.5rem;
+  line-height: 1.35;
+  padding: 0.35rem 0 0.35rem 12px;
+  border-left: 3px solid color-mix(in srgb, var(--sand) 70%, var(--terra));
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--sand) 22%, transparent) 0%,
+    transparent 12rem
+  );
+  scroll-margin-top: 12px;
+}
+
+.leadership-pres-h4 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--stone);
+  margin: 1rem 0 0.35rem;
+  scroll-margin-top: 12px;
+}
+
+.leadership-pres-p {
+  font-size: 0.9rem;
+  line-height: 1.65;
+  margin: 0 0 0.75rem;
+  color: var(--ink);
+}
+
+.leadership-pres-ul,
+.leadership-pres-ol {
+  margin: 0 0 0.85rem 1.15rem;
+  padding: 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--ink);
+}
+
+.leadership-pres-li {
+  margin-bottom: 0.35rem;
+}
+
+.leadership-pres-li::marker {
+  color: var(--terra);
+}
+
+.leadership-pres-strong {
+  font-weight: 600;
+  color: var(--ink2);
+}
+
+.leadership-pres-em {
+  font-style: italic;
+  color: var(--stone);
+}
+
+.leadership-pres-a {
+  color: var(--terra);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.leadership-pres-a:hover {
+  color: var(--ink2);
+}
+
+.leadership-pres-hr {
+  border: none;
+  height: 1px;
+  margin: 2rem 0;
+  background: linear-gradient(90deg, transparent, var(--bm) 12%, var(--bm) 88%, transparent);
+}
+
+.leadership-pres-bq {
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.85rem;
+  border-left: 3px solid var(--terra);
+  background: color-mix(in srgb, var(--sand) 35%, var(--cream));
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--ink2);
+}
+
+.leadership-pres-table-wrap {
+  overflow-x: auto;
+  margin: 0 0 1rem;
+  border: 1px solid var(--bm);
+  border-radius: var(--r);
+  background: var(--surf);
+}
+
+.leadership-pres-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.leadership-pres-th,
+.leadership-pres-td {
+  border-bottom: 1px solid var(--bm);
+  padding: 0.45rem 0.65rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.leadership-pres-th {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--stone);
+  background: color-mix(in srgb, var(--sand) 40%, var(--cream));
+}
+
+.leadership-pres-tr:last-child .leadership-pres-td {
+  border-bottom: none;
+}
+
+.leadership-pres-pre {
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  background: var(--ink2);
+  border-radius: var(--r);
+  overflow-x: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: #d8d4cc;
+}
+
+.leadership-pres-code--fenced {
+  display: block;
+  white-space: pre;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+.leadership-pres-code--inline {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.84em;
+  background: rgba(42, 41, 32, 0.08);
+  padding: 0.1em 0.35em;
+  border-radius: 3px;
+  color: var(--ink2);
+}
+
+.leadership-pres-mermaid-outer {
+  margin: 0 0 1.25rem;
+  padding: 12px 14px;
+  border: 1px solid var(--bm);
+  border-radius: var(--r);
+  background: var(--surf);
+  overflow-x: auto;
+}
+
+.leadership-pres-mermaid {
+  display: flex;
+  justify-content: center;
+}
+
+.leadership-pres-mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.leadership-pres-mermaid--err {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.leadership-pres-mermaid-err-lbl {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--red);
+}
+
+.leadership-pres-mermaid-err-pre {
+  margin: 0;
+  font-size: 0.75rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--stone);
+}
+
+/* ----- Leadership slides deck (condensed tab) ----- */
+.leadership-slides-root {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding: 16px 20px 20px;
+  background: var(--cream);
+  color: var(--ink);
+}
+
+.leadership-slides-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex-shrink: 0;
+  margin-bottom: 10px;
+}
+
+.leadership-slides-headingline {
+  max-width: 920px;
+  width: 100%;
+  margin: 0 auto 10px;
+  padding: 8px 14px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  line-height: 1.35;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--stone);
+  text-align: center;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--cream) 50%, var(--surf));
+  border: 1px solid var(--sand);
+}
+
+.leadership-slides-navbtn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--sand);
+  background: var(--surf);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.leadership-slides-navbtn:hover:not(:disabled) {
+  border-color: var(--terra);
+  color: var(--terra);
+}
+
+.leadership-slides-navbtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.leadership-slides-counter {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  color: var(--stone);
+  min-width: 5rem;
+  text-align: center;
+}
+
+.leadership-slides-strip {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 14px;
+  flex-shrink: 0;
+}
+
+.leadership-slides-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: none;
+  padding: 0;
+  background: var(--sand);
+  cursor: pointer;
+}
+
+.leadership-slides-dot:hover {
+  background: color-mix(in srgb, var(--terra) 45%, var(--sand));
+}
+
+.leadership-slides-dot.active {
+  background: var(--terra);
+  transform: scale(1.15);
+}
+
+.leadership-slides-stage {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  max-width: 920px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 28px 32px 36px;
+  background: linear-gradient(165deg, color-mix(in srgb, var(--surf) 92%, var(--cream)) 0%, var(--surf) 48%, var(--surf) 100%);
+  border: 1px solid var(--sand);
+  border-radius: 12px;
+  border-left: 3px solid color-mix(in srgb, var(--terra) 75%, var(--sand));
+  box-shadow: 0 4px 20px rgba(42, 38, 32, 0.045);
+}
+
+.leadership-slide-h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.65rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+.leadership-slide-h2 {
+  margin: 0 0 0.85rem;
+  padding-bottom: 0.45rem;
+  font-size: 1.2rem;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  border-bottom: 1px solid color-mix(in srgb, var(--sand) 80%, transparent);
+}
+
+.leadership-slide-h3 {
+  margin: 1rem 0 0.4rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--stone);
+}
+
+.leadership-slide-p {
+  margin: 0 0 0.65rem;
+  font-size: 0.98rem;
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+.leadership-slide-ul,
+.leadership-slide-ol {
+  margin: 0 0 0.75rem;
+  padding-left: 1.25rem;
+}
+
+.leadership-slide-li {
+  margin-bottom: 0.35rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.leadership-slide-strong {
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.leadership-slide-em {
+  font-style: italic;
+  color: var(--stone);
+}
+
+.leadership-slide-a {
+  color: var(--terra);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.leadership-slide-table-wrap {
+  overflow-x: auto;
+  margin: 0.5rem 0 0.75rem;
+}
+
+.leadership-slide-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.leadership-slide-th,
+.leadership-slide-td {
+  border: 1px solid var(--sand);
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.leadership-slide-th {
+  background: color-mix(in srgb, var(--cream) 65%, var(--surf));
+  font-weight: 600;
+}
+
+.leadership-slide-pre {
+  margin: 0.5rem 0;
+  padding: 12px;
+  overflow-x: auto;
+  font-size: 0.8rem;
+  border-radius: 8px;
+  background: var(--cream);
+  border: 1px solid var(--sand);
+}
+
+.leadership-slide-code--inline {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.84em;
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  background: var(--cream);
+}
+
+.leadership-slide-code--fenced {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.leadership-slide-mermaid-outer {
+  margin: 0.75rem auto;
+  padding: 14px 16px;
+  max-width: 720px;
+  border: 1px solid color-mix(in srgb, var(--sand) 90%, var(--stone));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--cream) 35%, var(--surf));
+  overflow-x: auto;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.leadership-slide-mermaid-outer .leadership-pres-mermaid {
+  min-height: 100px;
+}
+
+.leadership-slide-mermaid-outer .leadership-pres-mermaid svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  filter: saturate(0.92);
+}
+
+/* Calm default Mermaid flowchart chrome inside leadership deck only */
+.leadership-slide-mermaid-outer svg .node rect,
+.leadership-slide-mermaid-outer svg .node circle,
+.leadership-slide-mermaid-outer svg .node polygon,
+.leadership-slide-mermaid-outer svg .node path {
+  stroke-width: 1.15px !important;
+}
+
+.leadership-slide-mermaid-outer svg .edgePath path.path {
+  stroke: var(--stone) !important;
+  stroke-opacity: 0.85;
+}
+
+.leadership-slides-devhint {
+  flex-shrink: 0;
+  margin: 12px 0 0;
+  font-size: 0.72rem;
+  color: var(--stone);
+  text-align: center;
+}
+
+.leadership-slides-devcode {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
 }
 
 @media (max-width: 900px) {

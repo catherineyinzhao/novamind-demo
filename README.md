@@ -1,8 +1,16 @@
 # NovaMind · Claude Agent SDK demo (React)
 
-Vite + React + TypeScript UI with the **cream / ink / terra** palette from the original HTML demo. **Live agent** calls a **local Node API** that streams **`@anthropic-ai/claude-agent-sdk` `query()`** (Claude Code runtime), opens a **LangSmith** root run, and logs a **Braintrust** span using your API keys (never committed — paste per session or use `.env`).
+Vite + React + TypeScript UI with the **cream / ink / terra** palette from the original HTML demo. Open **Presentation** first for the leadership brief (markdown); use **Pipeline replay** for the static scenario, and **Live agent** for the streaming demo: a **local Node API** streams **`@anthropic-ai/claude-agent-sdk` `query()`** (Claude Code runtime), opens a **LangSmith** root run, and logs a **Braintrust** span using your API keys (never committed — paste per session or use `.env`).
 
 Trace dashboard URLs are built in `src/lib/traceUrls.ts`; observability ids are persisted in `localStorage` (keys are **not** stored).
+
+## Why Claude Agent SDK (vs only GPT‑5.1 / Gemini APIs)
+
+This is about **orchestration surface area**, not a single-model scoreboard. With typical **chat-completions + tools** integrations (OpenAI, Google, or Anthropic’s own Messages client), **you** usually own the multi-turn tool loop, delegation boundaries, and glue for observability. Anthropic documents the **Claude Agent SDK** as the same **tools, agent loop, and context management that power Claude Code**, as a TypeScript/Python library — including **built-in tools** (Read, Bash, Glob, Grep, …), **MCP** servers, **subagents** via the Agent tool, **hooks**, **permissions**, and **sessions** ([Agent SDK overview](https://docs.anthropic.com/en/agent-sdk/overview)). The TypeScript package also **bundles the Claude Code-class native binary** for your platform so you do not install Claude Code separately for the harness to run.
+
+For a NovaMind-style stack that is already **OpenAI-forward** but **model-agnostic-curious**, the pragmatic pitch is: keep your eval stack (e.g. LangSmith + Braintrust) and add a **first-class Claude path** where long multi-tool research runs reuse the **same harness** many engineers already use in Claude Code, instead of maintaining a second bespoke agent framework per vendor API.
+
+The **Live** tab sidebar expands this with links into the official docs (MCP, subagents, hooks, sessions).
 
 ## API keys (`.env`)
 
@@ -29,6 +37,7 @@ The API server loads these via `dotenv` (`import 'dotenv/config'` in `server/ind
 | `npm run dev:api` | API only |
 | `npm run dev:web` | Frontend only (needs API elsewhere for Live tab) |
 | `npm run build` | Typecheck + Vite production bundle (`dist/`) |
+| `npm test` | API smoke tests (`test:smoke`) — health, env-keys, NDJSON stream shape |
 | `npm run preview` | Static preview of `dist/` — **no API** unless you run it separately |
 
 ## Live agent flow
@@ -58,6 +67,26 @@ Helpers: `langSmithRunUrl`, `langSmithProjectUrl`, `braintrustExperimentUrl`, `b
 
 Ship the **API** alongside the static site (same host is ideal so keys are only sent to your backend over HTTPS). Point Vite’s proxy equivalent (nginx, etc.) at the Node service for `/api`. Do **not** expose users’ keys to third-party frontends.
 
+## Claude Agent SDK platform binary
+
+The Agent SDK ships a **Claude Code**-class native binary per OS/arch. This repo lists **`@anthropic-ai/claude-agent-sdk-darwin-arm64`** so Apple Silicon installs resolve the binary predictably. On **other machines**, add the matching optional package at the **same version** as `@anthropic-ai/claude-agent-sdk` (see `package.json`), then reinstall:
+
+| Host | Package (npm scope `@anthropic-ai/`) |
+| ---- | ------------------------------------- |
+| macOS Intel | `claude-agent-sdk-darwin-x64` |
+| Linux x64 (glibc) | `claude-agent-sdk-linux-x64` |
+| Linux x64 (musl) | `claude-agent-sdk-linux-x64-musl` |
+| Linux arm64 | `claude-agent-sdk-linux-arm64` |
+| Windows x64 | `claude-agent-sdk-win32-x64` |
+
+Example (Linux x64, adjust version to match `claude-agent-sdk` in `package.json`):
+
+```bash
+npm install @anthropic-ai/claude-agent-sdk-linux-x64@^0.2.139
+```
+
+If the SDK cannot find the binary, set **`CLAUDE_CODE_CLI_PATH`** or **`PATH_TO_CLAUDE_CODE_EXECUTABLE`** (see `.env.example`).
+
 ## Rollup native binding (build)
 
 If `vite build` fails with a missing `@rollup/rollup-*` package:
@@ -67,3 +96,11 @@ npm install -D @rollup/rollup-darwin-arm64
 ```
 
 (Use the package matching your OS/arch.) Or reinstall after removing `node_modules` and the lockfile.
+
+## Smoke tests
+
+```bash
+npm test
+```
+
+Runs `server/smoke.test.ts` via Node’s test runner (`node --import tsx --test`) against an in-process Express app (`createApp`): `/api/health`, `/api/env-keys`, and `POST /api/agent/stream` NDJSON shape when API keys are temporarily cleared (no network calls to Anthropic).

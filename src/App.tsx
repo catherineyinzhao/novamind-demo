@@ -2,8 +2,8 @@ import { useCallback, useState } from 'react'
 import { ObservabilityConfigProvider } from './context/ObservabilityConfigProvider'
 import { PipelineTab } from './components/pipeline/PipelineTab'
 import { LiveAgentTab } from './components/live/LiveAgentTab'
-
-export type MainTab = 'pipe' | 'live'
+import { LeadershipPresentationTab } from './components/presentation/LeadershipPresentationTab.tsx'
+export type MainTab = 'pipe' | 'live' | 'present'
 
 function NavSessionPill({
   tab,
@@ -34,7 +34,7 @@ function NavSessionPill({
 }
 
 function AppShell() {
-  const [tab, setTab] = useState<MainTab>('pipe')
+  const [tab, setTab] = useState<MainTab>('present')
   const [liveStatus, setLiveStatus] = useState<'idle' | 'running' | 'done'>('idle')
 
   const onLiveSession = useCallback((s: 'idle' | 'running' | 'done') => {
@@ -61,6 +61,13 @@ function AppShell() {
       <div className="tabbar">
         <button
           type="button"
+          className={`tab ${tab === 'present' ? 'active' : ''}`}
+          onClick={() => setTab('present')}
+        >
+          Presentation
+        </button>
+        <button
+          type="button"
           className={`tab ${tab === 'pipe' ? 'active' : ''}`}
           onClick={() => setTab('pipe')}
         >
@@ -72,6 +79,9 @@ function AppShell() {
       </div>
 
       <div className="main">
+        <div className={`tpane ${tab === 'present' ? 'active' : ''}`}>
+          <LeadershipPresentationTab />
+        </div>
         <div className={`tpane ${tab === 'pipe' ? 'active' : ''}`}>
           <PipelineTab />
         </div>
