@@ -57,6 +57,108 @@ function looksLikeApiOverloadAssistantText(body: string): boolean {
   )
 }
 
+/** Synthetic feed row when a pipeline phase starts — makes orchestrator vs sub-agents obvious in the main column. */
+function phaseMarkBlock(evt: {
+  phase: PipelinePhase
+  model?: string
+  langsmithChildId?: string
+}): FeedBlock {
+  const { phase, model, langsmithChildId } = evt
+  const modelLine = model ? `**Model:** \`${model}\`` : ''
+  const lsLine = langsmithChildId
+    ? `**LangSmith child:** \`${langsmithChildId.slice(0, 12)}…\` — full id in **Orchestration & traces**`
+    : ''
+  const tail = [modelLine, lsLine].filter(Boolean).join('\n\n')
+
+  switch (phase) {
+    case 'orchestrator':
+      return {
+        id: crypto.randomUUID(),
+        kind: 'phase_mark',
+        phase,
+        title: 'Orchestrator · main thread',
+        body: [
+          '**Main thread** — planning, checkpoints, then **Agent** tool calls only (no MCP here); each **Agent (delegate)** card below is an explicit handoff.',
+          tail,
+        ]
+            .filter(Boolean)
+            .join('\n\n'),
+        model,
+        langsmithChildId,
+      }
+    case 'literature':
+      return {
+        id: crypto.randomUUID(),
+        kind: 'phase_mark',
+        phase,
+        title: 'Sub-agent · Literature review',
+        body: [
+          '**Delegated** from orchestrator · **Isolated context** · MCP tools: `query_pubmed_corpus` only (PubMed plane).',
+          tail,
+        ]
+          .filter(Boolean)
+          .join('\n\n'),
+        model,
+        langsmithChildId,
+      }
+    case 'data':
+      return {
+        id: crypto.randomUUID(),
+        kind: 'phase_mark',
+        phase,
+        title: 'Sub-agent · Data analysis',
+        body: [
+          '**Delegated** from orchestrator · **Isolated context** · MCP tools: `fetch_experiment_summary` and `demo_endpoint_trajectory` (cohort metrics + deterministic demo chart). Each **TOOL_USE** row below is **model-emitted** inside this sub-agent (Agent SDK loop), not a control you clicked in the UI.',
+          tail,
+        ]
+          .filter(Boolean)
+          .join('\n\n'),
+        model,
+        langsmithChildId,
+      }
+    case 'hypothesis':
+      return {
+        id: crypto.randomUUID(),
+        kind: 'phase_mark',
+        phase,
+        title: 'Sub-agent · Hypothesis generation',
+        body: [
+          '**Delegated** from orchestrator · **Isolated context** · **No tools** — ranks hypotheses from literature + data handoffs and checkpoints.',
+          tail,
+        ]
+          .filter(Boolean)
+          .join('\n\n'),
+        model,
+        langsmithChildId,
+      }
+    case 'citation':
+      return {
+        id: crypto.randomUUID(),
+        kind: 'phase_mark',
+        phase,
+        title: 'Sub-agent · Citation audit',
+        body: [
+          '**Delegated** from orchestrator · **Isolated context** · MCP tool **verify_claimed_pmids** only — compares extracted PMIDs to this session’s PubMed tool returns.',
+          tail,
+        ]
+          .filter(Boolean)
+          .join('\n\n'),
+        model,
+        langsmithChildId,
+      }
+  }
+}
+
+function delegateMarkBlock(linkedToolId: string): FeedBlock {
+  return {
+    id: `delegate-${linkedToolId}`,
+    kind: 'delegate_mark',
+    title: 'Handoff',
+    body:
+      '**Orchestrator → Agent tool** → sub-agent run (**new** context).\n\nInspect the JSON for `subagent_type`.',
+  }
+}
+
 export function useAgentStream({
   onObsLine,
   onLangSmithRunId,
@@ -70,12 +172,15 @@ export function useAgentStream({
   const [braintrustChildren, setBraintrustChildren] = useState<BraintrustChildEvent[]>([])
   const [activePhase, setActivePhase] = useState<PipelinePhase | null>(null)
   const [completedPhases, setCompletedPhases] = useState<Partial<Record<PipelinePhase, boolean>>>({})
+  const [phaseDurationsMs, setPhaseDurationsMs] = useState<Partial<Record<PipelinePhase, number>>>({})
   const [liveStats, setLiveStats] = useState<LiveRunStats>(initialStats)
   const [streamingTextId, setStreamingTextId] = useState<string | null>(null)
   const [running, setRunning] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
   /** Set when the server emits `langsmith_run` — used to make the final Complete card concrete. */
   const langSmithRunIdRef = useRef<string | null>(null)
+  /** Mirrors `activePhase` synchronously for NDJSON handling (React state lags within the same tick). */
+  const activePhaseRef = useRef<PipelinePhase | null>(null)
 
   const appendObs = useCallback(
     (text: string, tone: ObsLine['tone'] = 'neutral') => {
@@ -96,9 +201,11 @@ export function useAgentStream({
       setBraintrustChildren([])
       setActivePhase(null)
       setCompletedPhases({})
+      setPhaseDurationsMs({})
       setLiveStats(initialStats)
       setStreamingTextId(null)
       langSmithRunIdRef.current = null
+      activePhaseRef.current = null
 
       try {
         const res = await fetch('/api/agent/stream', {
@@ -141,10 +248,16 @@ export function useAgentStream({
               setLiveStats((s) => ({ ...s, langsmithChildren: s.langsmithChildren + 1 }))
               break
             case 'phase_start':
+              activePhaseRef.current = evt.phase
               setActivePhase(evt.phase)
+              setBlocks((b) => [...b, phaseMarkBlock(evt)])
               break
             case 'phase_end':
               setCompletedPhases((prev) => ({ ...prev, [evt.phase]: true }))
+              if (evt.durationMs != null) {
+                setPhaseDurationsMs((prev) => ({ ...prev, [evt.phase]: evt.durationMs! }))
+              }
+              activePhaseRef.current = null
               setActivePhase(null)
               break
             case 'obs':
@@ -155,23 +268,51 @@ export function useAgentStream({
                 setLiveStats((s) => ({ ...s, obsBt: s.obsBt + 1 }))
               }
               break
-            case 'block_start':
+            case 'block_start': {
               if (evt.blockKind === 'tool' || evt.blockKind === 'tool_result') {
                 setLiveStats((s) => ({ ...s, toolBlocks: s.toolBlocks + 1 }))
               } else if (evt.blockKind === 'thinking') {
                 setLiveStats((s) => ({ ...s, thinkingBlocks: s.thinkingBlocks + 1 }))
               }
-              setBlocks((b) => [
-                ...b,
-                {
-                  id: evt.id,
-                  kind: evt.blockKind,
-                  title: evt.title,
-                  body: '',
-                },
-              ])
+              const isAgentDelegate =
+                evt.blockKind === 'tool' && evt.title.includes('Agent (delegate)')
+              const pipeline = payload.runMode === 'pipeline'
+              const refPhase = activePhaseRef.current
+              const stampFromActive =
+                pipeline &&
+                evt.actorPhase === undefined &&
+                refPhase != null &&
+                refPhase !== 'orchestrator' &&
+                !isAgentDelegate
+              const actorPhase = evt.actorPhase ?? (stampFromActive ? refPhase : undefined)
+              setBlocks((prev) => {
+                const next: FeedBlock[] = [...prev]
+                if (isAgentDelegate) {
+                  next.push(delegateMarkBlock(evt.id))
+                }
+                if (evt.blockKind === 'tool') {
+                  next.push({
+                    id: evt.id,
+                    kind: 'tool',
+                    title: evt.title,
+                    body: '',
+                    ...(actorPhase ? { actorPhase } : {}),
+                    ...(isAgentDelegate ? { isAgentDelegateTool: true } : {}),
+                  })
+                } else {
+                  next.push({
+                    id: evt.id,
+                    kind: evt.blockKind,
+                    title: evt.title,
+                    body: '',
+                    ...(actorPhase ? { actorPhase } : {}),
+                  })
+                }
+                return next
+              })
               if (evt.blockKind === 'text') setStreamingTextId(evt.id)
               break
+            }
             case 'block_delta':
               setBlocks((prev) => {
                 const prevBlk = prev.find((x) => x.id === evt.id)
@@ -300,6 +441,7 @@ export function useAgentStream({
     braintrustChildren,
     activePhase,
     completedPhases,
+    phaseDurationsMs,
     liveStats,
     streamingTextId,
     running,

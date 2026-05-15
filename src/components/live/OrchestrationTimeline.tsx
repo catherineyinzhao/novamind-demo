@@ -46,7 +46,7 @@ export function OrchestrationTimeline({
           When you <strong>Run</strong> the default research agent, LangSmith child run ids and nested Braintrust spans stream here as orchestrator and worker phases execute. The bar above summarizes how the <strong>Claude Agent SDK</strong> session (<code className="orch-tl-inline-code">query()</code>) is wired before the first token.
         </p>
         <p className="orch-tl-bridge">
-          Rows below follow the same phase boundaries as the <strong>phase rail</strong> and <strong>feed</strong> (orchestrator, then literature, data, hypothesis). Offline or online eval tooling can ingest{' '}
+          Rows below follow the same phase boundaries as the <strong>phase rail</strong> and <strong>feed</strong> (orchestrator, then literature, data, hypothesis, citation audit). Offline or online eval tooling can ingest{' '}
           <strong>transcript + tool I/O</strong> from those exports without a separate extraction pipeline beside the stream you already streamed.
         </p>
         <div className="orch-tl-preview">
@@ -68,7 +68,7 @@ export function OrchestrationTimeline({
       <div className="orch-tl-hd">Orchestration &amp; traces (this run)</div>
       <p className="orch-tl-subtitle">
         <strong>Panel</strong> · LangSmith child ids + Braintrust spans for offline eval exports — complements the <strong>rail</strong>{' '}
-        (phase) and <strong>feed</strong> (tokens / tool blocks).
+        (orchestrator → literature → data → hypothesis → citation) and <strong>feed</strong> (tokens / tool blocks).
       </p>
       <p className="orch-tl-bridge">
         Rows mirror SDK turns — <code className="orch-tl-inline-code">stream_event</code> frames and subagent boundaries from{' '}

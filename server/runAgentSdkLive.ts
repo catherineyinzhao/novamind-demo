@@ -14,27 +14,32 @@ import type {
 import type { BetaMessage } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
 import type { Client } from 'langsmith'
 import { startSpan } from 'braintrust'
-import type { AgentStreamRequest, StreamEvent } from '../shared/streamProtocol.ts'
+import type { AgentStreamRequest, PipelinePhase, StreamEvent } from '../shared/streamProtocol.ts'
 import {
   betaAssistantMessageToFeed,
   betaFinalMessageToolTail,
   betaStreamEventToFeed,
   createBetaFeedState,
+  inferPipelinePhaseFromMcpStreamEvent,
   resetBetaFeedState,
 } from './agentSdkBetaFeed.ts'
 import { novamindMcpScriptPath, resolveClaudeCodeExecutable } from './agentSdkPaths.ts'
 import { createLangSmithChildRun, endLangSmithChildRun } from './langsmithChildRun.ts'
 import {
+  AGENT_CITATION,
   AGENT_DATA,
   AGENT_HYPOTHESIS,
   AGENT_LITERATURE,
   buildPipelineSdkUserPrompt,
+  CITATION_AGENT_SYSTEM,
   DATA_AGENT_SYSTEM,
   HYPOTHESIS_AGENT_SYSTEM,
   LITERATURE_AGENT_SYSTEM,
   MCP_SERVER_NAME,
+  MCP_TOOL_DEMO_TRAJECTORY,
   MCP_TOOL_EXPERIMENT,
   MCP_TOOL_PUBMED,
+  MCP_TOOL_VERIFY_PMIDS,
 } from './researchPrompts.ts'
 
 const DEFAULT_ORCHESTRATOR_MODEL = 'claude-opus-4-7'
@@ -102,18 +107,22 @@ export async function* runAgentSdkLive(
   }
 
   const titlePrefixRef = { value: 'Assistant' }
+  /** Specialist phase while a pipeline sub-agent is running; cleared on SubagentStop. Used when `parent_tool_use_id` is set or for MCP inference. */
+  const activeSubagentPhaseRef = { value: null as PipelinePhase | null }
   const feedState = createBetaFeedState(assembledRef)
 
   let orchLsId: string | null = null
   let litLsId: string | null = null
   let dataLsId: string | null = null
   let hypLsId: string | null = null
+  let citeLsId: string | null = null
   let lsOrder = 2
 
   let orchBt: BtSpan | null = null
   let litBt: BtSpan | null = null
   let dataBt: BtSpan | null = null
   let hypBt: BtSpan | null = null
+  let citeBt: BtSpan | null = null
 
   const mainBufRef = { text: '' }
   let sawLiteratureStart = false
@@ -137,6 +146,16 @@ export async function* runAgentSdkLive(
   }
 
   try {
+    const phaseWallStartedAt: Partial<Record<PipelinePhase, number>> = {}
+    const markPhaseWall = (phase: PipelinePhase) => {
+      phaseWallStartedAt[phase] = Date.now()
+    }
+    const phaseEndEvent = (phase: PipelinePhase): StreamEvent => {
+      const t0 = phaseWallStartedAt[phase]
+      const durationMs = t0 != null ? Math.max(0, Date.now() - t0) : undefined
+      return { type: 'phase_end', phase, ...(durationMs != null ? { durationMs } : {}) }
+    }
+
     if (runMode === 'pipeline') {
       titlePrefixRef.value = 'Orchestrator'
 
@@ -194,6 +213,7 @@ export async function* runAgentSdkLive(
         tone: 'lf',
         text: `langsmith: child run ${orchLsId.slice(0, 8)}… (orchestrator · ${orchestratorModel})`,
       }
+      markPhaseWall('orchestrator')
       yield { type: 'phase_start', phase: 'orchestrator', model: orchestratorModel, langsmithChildId: orchLsId }
       yield {
         type: 'braintrust_child',
@@ -228,13 +248,19 @@ export async function* runAgentSdkLive(
               description: 'Validate themes against client experimental summaries via MCP.',
               prompt: DATA_AGENT_SYSTEM,
               model: workerModel,
-              tools: [MCP_TOOL_EXPERIMENT],
+              tools: [MCP_TOOL_EXPERIMENT, MCP_TOOL_DEMO_TRAJECTORY],
             },
             [AGENT_HYPOTHESIS]: {
               description: 'Structured hypotheses from literature + data handoffs (no tools).',
               prompt: HYPOTHESIS_AGENT_SYSTEM,
               model: workerModel,
               tools: [],
+            },
+            [AGENT_CITATION]: {
+              description: 'Verify PMIDs in hypothesis text against session PubMed tool returns via MCP.',
+              prompt: CITATION_AGENT_SYSTEM,
+              model: workerModel,
+              tools: [MCP_TOOL_VERIFY_PMIDS],
             },
           }
         : undefined
@@ -249,6 +275,9 @@ export async function* runAgentSdkLive(
                     if (input.agent_type === AGENT_LITERATURE && !sawLiteratureStart) {
                       sawLiteratureStart = true
                       mainCapture.active = false
+                      /** Before any await: sub-agent stream events must not use a stale Orchestrator prefix. */
+                      titlePrefixRef.value = 'Literature review'
+                      activeSubagentPhaseRef.value = 'literature'
                       if (orchLsId) {
                         await endLangSmithChildRun(ls, orchLsId, {
                           outputs: { text: mainBufRef.text, model: orchestratorModel },
@@ -261,9 +290,8 @@ export async function* runAgentSdkLive(
                       orchBt?.end()
                       orchBt = null
 
-                      enqueue({ type: 'phase_end', phase: 'orchestrator' })
+                      enqueue(phaseEndEvent('orchestrator'))
 
-                      titlePrefixRef.value = 'Literature review'
                       const litLs = await createLangSmithChildRun(ls, {
                         traceId: runId,
                         parentRunId: runId,
@@ -292,6 +320,7 @@ export async function* runAgentSdkLive(
                         tone: 'lf',
                         text: `langsmith: child run ${litLsId.slice(0, 8)}… (literature · ${workerModel})`,
                       })
+                      markPhaseWall('literature')
                       enqueue({ type: 'phase_start', phase: 'literature', model: workerModel, langsmithChildId: litLsId })
                       enqueue({
                         type: 'braintrust_child',
@@ -300,12 +329,13 @@ export async function* runAgentSdkLive(
                       })
                     } else if (input.agent_type === AGENT_DATA) {
                       titlePrefixRef.value = 'Data analysis'
+                      activeSubagentPhaseRef.value = 'data'
                       const dataLs = await createLangSmithChildRun(ls, {
                         traceId: runId,
                         parentRunId: runId,
                         name: 'subagent.data_analysis',
                         run_type: 'llm',
-                        inputs: { model: workerModel, tools: ['fetch_experiment_summary'] },
+                        inputs: { model: workerModel, tools: ['fetch_experiment_summary', 'demo_endpoint_trajectory'] },
                         project_name: langsmithProjectName,
                         executionOrder: lsOrder++,
                       })
@@ -328,6 +358,7 @@ export async function* runAgentSdkLive(
                         tone: 'lf',
                         text: `langsmith: child run ${dataLsId.slice(0, 8)}… (data analysis · ${workerModel})`,
                       })
+                      markPhaseWall('data')
                       enqueue({ type: 'phase_start', phase: 'data', model: workerModel, langsmithChildId: dataLsId })
                       enqueue({
                         type: 'braintrust_child',
@@ -336,6 +367,7 @@ export async function* runAgentSdkLive(
                       })
                     } else if (input.agent_type === AGENT_HYPOTHESIS) {
                       titlePrefixRef.value = 'Hypothesis generation'
+                      activeSubagentPhaseRef.value = 'hypothesis'
                       const hypLs = await createLangSmithChildRun(ls, {
                         traceId: runId,
                         parentRunId: runId,
@@ -364,11 +396,50 @@ export async function* runAgentSdkLive(
                         tone: 'lf',
                         text: `langsmith: child run ${hypLsId.slice(0, 8)}… (hypothesis · ${workerModel})`,
                       })
+                      markPhaseWall('hypothesis')
                       enqueue({ type: 'phase_start', phase: 'hypothesis', model: workerModel, langsmithChildId: hypLsId })
                       enqueue({
                         type: 'braintrust_child',
                         spanId: hypBt.spanId,
                         name: 'subagent.hypothesis',
+                      })
+                    } else if (input.agent_type === AGENT_CITATION) {
+                      titlePrefixRef.value = 'Citation audit'
+                      activeSubagentPhaseRef.value = 'citation'
+                      const citeLs = await createLangSmithChildRun(ls, {
+                        traceId: runId,
+                        parentRunId: runId,
+                        name: 'subagent.citation_audit',
+                        run_type: 'llm',
+                        inputs: { model: workerModel, tools: ['verify_claimed_pmids'] },
+                        project_name: langsmithProjectName,
+                        executionOrder: lsOrder++,
+                      })
+                      citeLsId = citeLs.childRunId
+                      citeBt = startSpan({
+                        name: 'subagent.citation_audit',
+                        parent: btParentExport,
+                        event: { input: { model: workerModel, phase: 'citation_audit' } },
+                      })
+
+                      enqueue({
+                        type: 'langsmith_child',
+                        name: 'subagent.citation_audit',
+                        childRunId: citeLsId,
+                        parentRunId: runId,
+                        role: 'citation_audit',
+                      })
+                      enqueue({
+                        type: 'obs',
+                        tone: 'lf',
+                        text: `langsmith: child run ${citeLsId.slice(0, 8)}… (citation audit · ${workerModel})`,
+                      })
+                      markPhaseWall('citation')
+                      enqueue({ type: 'phase_start', phase: 'citation', model: workerModel, langsmithChildId: citeLsId })
+                      enqueue({
+                        type: 'braintrust_child',
+                        spanId: citeBt.spanId,
+                        name: 'subagent.citation_audit',
                       })
                     }
                     return {}
@@ -382,39 +453,61 @@ export async function* runAgentSdkLive(
                   async (input: SubagentStopHookInput) => {
                     const tail = input.last_assistant_message ?? ''
                     if (input.agent_type === AGENT_LITERATURE && litLsId) {
+                      activeSubagentPhaseRef.value = null
+                      /** Main-thread checkpoints before next Agent call must show Orchestrator prefix. */
+                      titlePrefixRef.value = 'Orchestrator'
                       litBt?.log({ output: { text: tail }, metadata: { model: workerModel } })
                       litBt?.end()
                       litBt = null
                       await endLangSmithChildRun(ls, litLsId, {
                         outputs: { text: tail, model: workerModel },
                       })
-                      enqueue({ type: 'phase_end', phase: 'literature' })
+                      enqueue(phaseEndEvent('literature'))
                       enqueue({
                         type: 'obs',
                         tone: 'neutral',
                         text: 'orchestration: handoff · literature synthesis → Data analysis agent (client experimental plane)',
                       })
                     } else if (input.agent_type === AGENT_DATA && dataLsId) {
+                      activeSubagentPhaseRef.value = null
+                      titlePrefixRef.value = 'Orchestrator'
                       dataBt?.log({ output: { text: tail }, metadata: { model: workerModel } })
                       dataBt?.end()
                       dataBt = null
                       await endLangSmithChildRun(ls, dataLsId, {
                         outputs: { text: tail, model: workerModel },
                       })
-                      enqueue({ type: 'phase_end', phase: 'data' })
+                      enqueue(phaseEndEvent('data'))
                       enqueue({
                         type: 'obs',
                         tone: 'neutral',
                         text: 'orchestration: handoff · literature + data memos → Hypothesis generation',
                       })
                     } else if (input.agent_type === AGENT_HYPOTHESIS && hypLsId) {
+                      activeSubagentPhaseRef.value = null
+                      titlePrefixRef.value = 'Orchestrator'
                       hypBt?.log({ output: { text: tail }, metadata: { model: workerModel } })
                       hypBt?.end()
                       hypBt = null
                       await endLangSmithChildRun(ls, hypLsId, {
                         outputs: { text: tail, model: workerModel },
                       })
-                      enqueue({ type: 'phase_end', phase: 'hypothesis' })
+                      enqueue(phaseEndEvent('hypothesis'))
+                      enqueue({
+                        type: 'obs',
+                        tone: 'neutral',
+                        text: 'orchestration: handoff · ranked hypotheses → Citation audit (PMID verification via MCP)',
+                      })
+                    } else if (input.agent_type === AGENT_CITATION && citeLsId) {
+                      activeSubagentPhaseRef.value = null
+                      titlePrefixRef.value = 'Orchestrator'
+                      citeBt?.log({ output: { text: tail }, metadata: { model: workerModel } })
+                      citeBt?.end()
+                      citeBt = null
+                      await endLangSmithChildRun(ls, citeLsId, {
+                        outputs: { text: tail, model: workerModel },
+                      })
+                      enqueue(phaseEndEvent('citation'))
                     }
                     return {}
                   },
@@ -446,7 +539,7 @@ export async function* runAgentSdkLive(
       },
       includePartialMessages: true,
       forwardSubagentText: true,
-      maxTurns: runMode === 'pipeline' ? 45 : 25,
+      maxTurns: runMode === 'pipeline' ? 55 : 25,
       ...(hooks ? { hooks } : {}),
       mcpServers:
         runMode === 'pipeline' || runMode === 'tools'
@@ -463,7 +556,7 @@ export async function* runAgentSdkLive(
         runMode === 'pipeline'
           ? ['Agent']
           : runMode === 'tools'
-            ? [MCP_TOOL_PUBMED, MCP_TOOL_EXPERIMENT]
+            ? [MCP_TOOL_PUBMED, MCP_TOOL_EXPERIMENT, MCP_TOOL_DEMO_TRAJECTORY, MCP_TOOL_VERIFY_PMIDS]
             : [],
     }
 
@@ -472,9 +565,20 @@ export async function* runAgentSdkLive(
       options: baseOpts,
     })
 
+    const pipelineFeedHints = runMode === 'pipeline'
+
     for await (const msg of q) {
       yield* flushQueue()
-      yield* handleSdkMessage(msg, signal, feedState, titlePrefixRef, mainCapture, mainBufRef)
+      yield* handleSdkMessage(
+        msg,
+        signal,
+        feedState,
+        titlePrefixRef,
+        activeSubagentPhaseRef,
+        pipelineFeedHints,
+        mainCapture,
+        mainBufRef,
+      )
     }
 
     yield* flushQueue()
@@ -489,19 +593,93 @@ export async function* runAgentSdkLive(
   }
 }
 
+function titlePrefixToActorPhase(prefix: string): PipelinePhase | undefined {
+  const p = prefix.trim()
+  if (p === 'Orchestrator') return 'orchestrator'
+  if (p === 'Literature review') return 'literature'
+  if (p === 'Data analysis') return 'data'
+  if (p === 'Hypothesis generation') return 'hypothesis'
+  if (p === 'Citation audit') return 'citation'
+  return undefined
+}
+
+function actorPhaseToFeedTitlePrefix(
+  phase: Extract<PipelinePhase, 'literature' | 'data' | 'hypothesis' | 'citation'>,
+): string {
+  switch (phase) {
+    case 'literature':
+      return 'Literature review'
+    case 'data':
+      return 'Data analysis'
+    case 'hypothesis':
+      return 'Hypothesis generation'
+    case 'citation':
+      return 'Citation audit'
+  }
+}
+
+function resolvePipelineStreamAttribution(
+  partial: SDKPartialAssistantMessage,
+  ev: SDKPartialAssistantMessage['event'],
+  pipelineFeedHints: boolean,
+  titlePrefixRef: { value: string },
+  activeSubagentPhaseRef: { value: PipelinePhase | null },
+): { prefix: string; actorPhase: PipelinePhase | undefined } {
+  const delegated =
+    partial.parent_tool_use_id != null &&
+    activeSubagentPhaseRef.value != null &&
+    activeSubagentPhaseRef.value !== 'orchestrator'
+      ? activeSubagentPhaseRef.value
+      : undefined
+
+  const inferredMcp = pipelineFeedHints ? inferPipelinePhaseFromMcpStreamEvent(ev) : undefined
+
+  let actorPhase: PipelinePhase | undefined
+  if (
+    delegated === 'literature' ||
+    delegated === 'data' ||
+    delegated === 'hypothesis' ||
+    delegated === 'citation'
+  ) {
+    actorPhase = delegated
+  } else if (inferredMcp === 'literature' || inferredMcp === 'data' || inferredMcp === 'citation') {
+    actorPhase = inferredMcp
+  } else {
+    actorPhase = titlePrefixToActorPhase(titlePrefixRef.value)
+  }
+
+  const prefix =
+    actorPhase === 'literature' ||
+    actorPhase === 'data' ||
+    actorPhase === 'hypothesis' ||
+    actorPhase === 'citation'
+      ? actorPhaseToFeedTitlePrefix(actorPhase)
+      : titlePrefixRef.value
+
+  return { prefix, actorPhase }
+}
+
 function* handleSdkMessage(
   msg: SDKMessage,
   signal: AbortSignal,
   feedState: ReturnType<typeof createBetaFeedState>,
   titlePrefixRef: { value: string },
+  activeSubagentPhaseRef: { value: PipelinePhase | null },
+  pipelineFeedHints: boolean,
   mainCapture: { active: boolean },
   mainBufRef: { text: string },
 ): Generator<StreamEvent> {
   if (msg.type === 'stream_event') {
     const partial = msg as SDKPartialAssistantMessage
     const ev = partial.event
-    const prefix = titlePrefixRef.value
-    yield* betaStreamEventToFeed(ev, signal, feedState, prefix)
+    const { prefix, actorPhase } = resolvePipelineStreamAttribution(
+      partial,
+      ev,
+      pipelineFeedHints,
+      titlePrefixRef,
+      activeSubagentPhaseRef,
+    )
+    yield* betaStreamEventToFeed(ev, signal, feedState, prefix, actorPhase)
 
     if (
       ev.type === 'content_block_delta' &&
@@ -517,7 +695,13 @@ function* handleSdkMessage(
   if (msg.type === 'assistant') {
     const betaMsg = (msg as { message: BetaMessage }).message
     yield* betaFinalMessageToolTail(betaMsg, feedState)
-    yield* betaAssistantMessageToFeed(betaMsg, feedState, titlePrefixRef.value)
+    yield* betaAssistantMessageToFeed(
+      betaMsg,
+      feedState,
+      titlePrefixRef.value,
+      titlePrefixToActorPhase(titlePrefixRef.value),
+      pipelineFeedHints,
+    )
     resetBetaFeedState(feedState)
     return
   }

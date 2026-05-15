@@ -9,20 +9,26 @@
     "dev:api": "tsx watch server/index.ts",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "npm run test:smoke",
+    "test:smoke": "node --import tsx --test server/smoke.test.ts server/streamProtocol.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.139",
     "@anthropic-ai/claude-agent-sdk-darwin-arm64": "^0.2.139",
     "@anthropic-ai/sdk": "^0.95.2",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "braintrust": "^3.10.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "github-slugger": "^2.0.0",
     "langsmith": "^0.6.3",
+    "mermaid": "^11.15.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-markdown": "^10.1.0",
+    "rehype-slug": "^6.0.0",
     "remark-gfm": "^4.0.1",
     "zod": "^4.4.3"
   },

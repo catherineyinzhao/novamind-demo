@@ -45,18 +45,22 @@ export function SessionTopologyStrip({
           </div>
           <div className="session-topology-node session-topology-node--worker">
             <span className="session-topology-role">Data</span>
-            <span className="session-topology-meta">MCP · ≥2 experiment fetches · cohort slices</span>
+            <span className="session-topology-meta">MCP · ≥2 experiment fetches · demo trajectory SVG</span>
           </div>
           <div className="session-topology-node session-topology-node--worker">
             <span className="session-topology-role">Hypothesis</span>
             <span className="session-topology-meta">No tools · synthesis from handoffs</span>
+          </div>
+          <div className="session-topology-node session-topology-node--worker">
+            <span className="session-topology-role">Citation</span>
+            <span className="session-topology-meta">MCP · verify_claimed_pmids vs session corpus</span>
           </div>
         </div>
       </div>
       <p className="session-topology-tagline">
         Main thread · plan, risks, per-phase success bars, and{' '}
         <strong>checkpoints after literature / after data</strong> before the next delegation. Workers · multi-query literature passes and
-        dual experiment summaries per protocol.
+        dual experiment summaries, trajectory chart tool, and a final PMID verification pass per protocol.
       </p>
     </div>
   )

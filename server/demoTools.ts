@@ -36,11 +36,27 @@ const EXPERIMENT_TOOL: Tool = {
   },
 }
 
+const TRAJECTORY_TOOL: Tool = {
+  name: 'demo_endpoint_trajectory',
+  description:
+    'Returns a small deterministic SVG (tumor volume / response index) for client reporting demos — no code execution.',
+  input_schema: {
+    type: 'object' as const,
+    properties: {
+      cohort_id: {
+        type: 'string',
+        description: 'Optional label for chart caption (ignored in stub)',
+      },
+    },
+    required: [],
+  },
+}
+
 /** Literature-review sub-agent only — external PubMed corpus via tool (no full corpus in context). */
 export const DEMO_LITERATURE_TOOLS: Tool[] = [PUBMED_TOOL]
 
-/** Data-analysis sub-agent only — validates themes against the client experimental plane. */
-export const DEMO_DATA_TOOLS: Tool[] = [EXPERIMENT_TOOL]
+/** Data-analysis sub-agent only — validates themes against the client experimental plane + demo chart artifact. */
+export const DEMO_DATA_TOOLS: Tool[] = [EXPERIMENT_TOOL, TRAJECTORY_TOOL]
 
 /**
  * Demo-only tools — deterministic stubs. “Tools” run mode exposes both planes; pipeline assigns each tool to a
@@ -92,6 +108,22 @@ export function executeDemoTool(name: string, rawInput: unknown): string {
         null,
         2,
       )
+    }
+    case 'demo_endpoint_trajectory': {
+      const w = 320
+      const h = 120
+      const pts = [12, 28, 35, 48, 62, 78, 88, 95]
+      const d = pts
+        .map((y, i) => `${(i / (pts.length - 1)) * (w - 8) + 4},${h - 8 - (y / 100) * (h - 16)}`)
+        .join(' ')
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><rect width="100%" height="100%" fill="#f7f2ea"/><polyline fill="none" stroke="#8b4513" stroke-width="2" points="${d}"/><text x="8" y="16" font-size="11" fill="#2a1810">Demo PDX tumor volume index (normalized)</text></svg>`
+      return [
+        '### Demo trajectory (synthetic)',
+        '',
+        'Deterministic SVG returned by MCP — production would stream from your viz service or a sandboxed notebook runner.',
+        '',
+        svg,
+      ].join('\n')
     }
     default:
       return JSON.stringify({ error: `unknown_tool: ${name}` })

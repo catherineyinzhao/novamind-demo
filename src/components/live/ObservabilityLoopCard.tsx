@@ -18,7 +18,7 @@ export function ObservabilityLoopCard({ langSmithRunId = '' }: { langSmithRunId?
         <FlowArrow />
         <span className="obs-loop-flow-step">LangSmith root</span>
         <FlowArrow />
-        <span className="obs-loop-flow-step">orch · lit · data · hyp</span>
+        <span className="obs-loop-flow-step">orch · lit · data · hyp · cite</span>
         <FlowArrow />
         <span className="obs-loop-flow-step">Feed · tools + text</span>
         <FlowArrow />
@@ -41,7 +41,7 @@ export function ObservabilityLoopCard({ langSmithRunId = '' }: { langSmithRunId?
       <p className="obs-loop-lede">
         <strong>Important:</strong> LangSmith and Braintrust do not change the model mid-request. Each Messages API
         session in this demo still maps to <strong>one LangSmith root run</strong> (orchestrator + child spans for{' '}
-        <strong>literature review</strong>, <strong>data analysis</strong>, and downstream <strong>hypothesis generation</strong>) and{' '}
+        <strong>literature review</strong>, <strong>data analysis</strong>, <strong>hypothesis generation</strong>, and <strong>citation audit</strong>) and{' '}
         <strong>Braintrust experiments</strong> (scorers on exported trajectories) for the same outputs — they record{' '}
         <em>what happened</em> (tool calls, latency, scores). The <strong>feedback loop</strong> is harness-driven: you
         inspect traces, add failing cases to an eval suite, tune prompts, PubMed ingestion heuristics, compaction, or
@@ -54,7 +54,7 @@ export function ObservabilityLoopCard({ langSmithRunId = '' }: { langSmithRunId?
         <ul className="obs-loop-where-list">
           <li>
             <strong>Phase rail</strong> (top of main column) — stream-driven dots for Orchestrator → Literature review →
-            Data analysis → Hypothesis.
+            Data analysis → Hypothesis → Citation audit.
           </li>
           <li>
             <strong>Orchestration &amp; traces</strong> (below <strong>Resize traces</strong>) — LangSmith child run ids,
@@ -73,7 +73,7 @@ export function ObservabilityLoopCard({ langSmithRunId = '' }: { langSmithRunId?
 
       <ul className="obs-loop-list">
         <li>
-          <div className="obs-loop-maps">Maps to: literature + data + hypothesis phases; LangSmith transcript + compaction between waves.</div>
+          <div className="obs-loop-maps">Maps to: literature + data + hypothesis + citation phases; LangSmith transcript + compaction between waves.</div>
           <strong>Wave-to-wave durability</strong> — Between literature and data runs, NovaMind persists merged digests,
           citation manifests, and cohort version ids so the orchestrator opens the next session on a{' '}
           <strong>checkpoint</strong>, not a blank slate. LangSmith holds the full forked transcript; only a bounded

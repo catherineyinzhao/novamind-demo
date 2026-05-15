@@ -21,7 +21,7 @@ export type LangSmithChildEvent = {
   name: string
   childRunId: string
   parentRunId: string
-  role: 'orchestrator' | 'literature' | 'data_analysis' | 'hypothesis'
+  role: 'orchestrator' | 'literature' | 'data_analysis' | 'hypothesis' | 'citation_audit'
 }
 
 /** Nested Braintrust span under the session root (orchestrator / sub-agent phases). */
@@ -31,8 +31,8 @@ export type BraintrustChildEvent = {
   name: string
 }
 
-/** Pipeline-only: drives Live phase rail (orchestrator → literature → data → hypothesis). */
-export type PipelinePhase = 'orchestrator' | 'literature' | 'data' | 'hypothesis'
+/** Pipeline-only: drives Live phase rail (orchestrator → literature → data → hypothesis → citation). */
+export type PipelinePhase = 'orchestrator' | 'literature' | 'data' | 'hypothesis' | 'citation'
 
 export type PhaseStartEvent = {
   type: 'phase_start'
@@ -44,6 +44,8 @@ export type PhaseStartEvent = {
 export type PhaseEndEvent = {
   type: 'phase_end'
   phase: PipelinePhase
+  /** Wall-clock ms for this phase in this run (server-computed); omit if start time was unavailable. */
+  durationMs?: number
 }
 
 export type StreamEvent =
@@ -55,7 +57,14 @@ export type StreamEvent =
   | PhaseStartEvent
   | PhaseEndEvent
   | { type: 'obs'; tone: ObsTone; text: string }
-  | { type: 'block_start'; id: string; blockKind: FeedKind; title: string }
+  | {
+      type: 'block_start'
+      id: string
+      blockKind: FeedKind
+      title: string
+      /** Pipeline run: which actor produced this block (for Live feed styling). */
+      actorPhase?: PipelinePhase
+    }
   | { type: 'block_delta'; id: string; text: string }
   | { type: 'error'; message: string }
   | { type: 'done'; aborted?: boolean }
@@ -68,7 +77,8 @@ export type AgentRunMode =
   | 'tools'
   /**
    * Default research agent on the server: orchestrator planning pass, then literature review (PubMed corpus tool),
-   * data analysis (client cohort tool), hypothesis generation (synthesis, no tools). Semi-autonomous sub-agent split.
+   * data analysis (client cohort + demo trajectory plot), hypothesis generation (synthesis, no tools), citation audit
+   * (verify PMIDs vs session MCP allowlist). Semi-autonomous sub-agent split.
    */
   | 'pipeline'
 

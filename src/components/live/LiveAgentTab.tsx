@@ -24,7 +24,7 @@ import { stripEmojis } from '../../utils/stripEmojis'
 
 /** Shown only under “Alternate run modes”; default UX is the fixed research workflow (`pipeline`). */
 const ADVANCED_RUN_MODE_OPTIONS: { value: AgentRunMode; label: string }[] = [
-  { value: 'pipeline', label: 'Research agent (default): orchestrator + literature, data, hypothesis' },
+  { value: 'pipeline', label: 'Research agent (default): orchestrator + literature, data, hypothesis, citation' },
   { value: 'tools', label: 'Single agent, multi-turn tools only (demo harness)' },
   { value: 'single', label: 'Single stream, no tools (demo harness)' },
 ]
@@ -195,6 +195,7 @@ export function LiveAgentTab({
     braintrustChildren,
     activePhase,
     completedPhases,
+    phaseDurationsMs,
     liveStats,
     streamingTextId,
     running,
@@ -204,6 +205,26 @@ export function LiveAgentTab({
     onObsLine: (line) => setObsLines((prev) => [...prev.slice(-120), line]),
     onLangSmithRunId: (id) => setConfig({ langSmithRunId: id }),
   })
+
+  const phaseWallSummary = useMemo(() => {
+    if (runMode !== 'pipeline') return ''
+    const order = ['orchestrator', 'literature', 'data', 'hypothesis', 'citation'] as const
+    const short: Record<(typeof order)[number], string> = {
+      orchestrator: 'orch',
+      literature: 'lit',
+      data: 'data',
+      hypothesis: 'hyp',
+      citation: 'cite',
+    }
+    const parts = order
+      .map((p) => {
+        const ms = phaseDurationsMs[p]
+        if (ms == null || !Number.isFinite(ms)) return null
+        return `${short[p]} ${(ms / 1000).toFixed(1)}s`
+      })
+      .filter(Boolean)
+    return parts.join(' · ')
+  }, [runMode, phaseDurationsMs])
 
   const { data: envKeys, loading: envKeysLoading, error: envKeysError } = useEnvKeysStatus()
   const ep = envKeys?.live
@@ -566,8 +587,17 @@ export function LiveAgentTab({
           />
           <SessionTopologyStrip runMode={runMode} variant="live" />
           <NovaMindProtocolChecklist runMode={runMode} />
-          <LivePhaseRail runMode={runMode} activePhase={activePhase} completedPhases={completedPhases} />
-          <LiveStatsRow stats={liveStats} running={running} />
+          <LivePhaseRail
+            runMode={runMode}
+            activePhase={activePhase}
+            completedPhases={completedPhases}
+            phaseDurationsMs={phaseDurationsMs}
+          />
+          <LiveStatsRow
+            stats={liveStats}
+            running={running}
+            phaseWallSummary={runMode === 'pipeline' ? phaseWallSummary : undefined}
+          />
         </div>
         <p className="live-feed-caption">
           <strong>Feed</strong> · streamed assistant tokens, <code style={{ fontSize: 10 }}>tool_use</code> / tool payloads, and phase-titled blocks from{' '}
@@ -593,7 +623,7 @@ export function LiveAgentTab({
               onClick={handleRun}
               aria-label={
                 runMode === 'pipeline'
-                  ? 'Run research agent (orchestrator and literature, data, hypothesis workers)'
+                  ? 'Run research agent (orchestrator and literature, data, hypothesis, citation workers)'
                   : runMode === 'tools'
                     ? 'Run multi-turn tool loop harness'
                     : 'Run single-stream harness'
