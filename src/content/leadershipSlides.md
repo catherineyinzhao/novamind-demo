@@ -98,6 +98,18 @@ We suggest **~100** end-to-end tasks (Part 2) and, when staging allows, a **boun
 
 ---
 
+## Part 1 · Board mandate — model agnosticism at the harness level
+
+**Context:** NovaMind’s board wants **more model-agnostic infrastructure**—i.e. **less “one vendor baked into the architecture.”**
+
+**Connecting mandate → mechanism:** **`AgentDefinition.model`** is **per-lane configuration**, not a hardwired “the whole product is vendor X” structural choice. **Coordinator / literature / data / hypothesis** stay **named agent definitions** with **tools, MCP, hooks, permissions, sessions, structured outputs**—the **shape** of the pipeline. The **model id** on each definition is the **parameter** you change when a better SKU wins on **frozen `ResearchTask` eval**.
+
+**When a better model ships**—from Anthropic, OpenAI, Google, or anyone else—you **change the model field (and validate)**, not **re-architect** delegation, PubMed MCP, sponsor ACLs, or Hypothesis schema wiring.
+
+**CEO line:** that is **model agnosticism at the harness level**: the board gets **swappable engines per lane** and **stable workflow contracts**—which is what the mandate is actually asking for.
+
+---
+
 ## Part 1 · The Agent SDK — architecture and key technical details
 
 **`while (stop_reason == tool_use)` in plain terms:** the model returns “please run tool X with args Y”; **your code** must run X, feed the result back, call the model again, and repeat until the model stops asking for tools. That loop is easy to sketch and hard to run in production (streaming, retries, partial failures, security).
