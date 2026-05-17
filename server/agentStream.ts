@@ -5,7 +5,7 @@ import type { AgentStreamRequest, StreamEvent } from '../shared/streamProtocol.t
 import { createRootLangSmithRun } from './langsmithRootRun.ts'
 import { runAgentSdkLive, type AssembledRef, type RunAgentSdkContext } from './runAgentSdkLive.ts'
 
-const DEFAULT_MODEL = process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-5-20250929'
+const DEFAULT_MODEL = process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-6'
 
 export async function* runAgentStream(
   body: AgentStreamRequest,

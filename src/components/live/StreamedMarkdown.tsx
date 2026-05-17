@@ -45,7 +45,7 @@ export function StreamedMarkdown({ source }: { source: string }) {
   )
 }
 
-function tryPrettifyJsonFragment(body: string): string {
+export function tryPrettifyJsonFragment(body: string): string {
   const t = body.trim()
   if (!t) return body
   try {

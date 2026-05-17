@@ -1,3 +1,5 @@
+import type { AgentRunMode } from '../../../shared/streamProtocol.ts'
+
 export type LiveRunStats = {
   toolBlocks: number
   thinkingBlocks: number
@@ -6,18 +8,23 @@ export type LiveRunStats = {
   langsmithChildren: number
   braintrustRoot: number
   braintrustChildren: number
+  schemaViolations?: number
 }
 
 export function LiveStatsRow({
   stats,
   running,
+  runMode,
   phaseWallSummary,
 }: {
   stats: LiveRunStats
   running: boolean
+  runMode: AgentRunMode
   /** Optional compact line from completed phase_end.durationMs (pipeline). */
   phaseWallSummary?: string
 }) {
+  const schemaCount = stats.schemaViolations ?? 0
+
   return (
     <div className="live-stats-wrap" aria-live="polite">
       <div className="live-stats-row">
@@ -60,6 +67,17 @@ export function LiveStatsRow({
         <span className="live-stats-item">
           obs BT <strong>{stats.obsBt}</strong>
         </span>
+        {runMode === 'pipeline' ? (
+          <>
+            <span className="live-stats-sep" aria-hidden>
+              ·
+            </span>
+            <span className="live-stats-item">
+              schema violations{' '}
+              <strong className={schemaCount > 0 ? 'live-stats-warn' : undefined}>{schemaCount}</strong>
+            </span>
+          </>
+        ) : null}
         {running ? <span className="live-stats-pulse" aria-hidden /> : null}
       </div>
       {phaseWallSummary ? (

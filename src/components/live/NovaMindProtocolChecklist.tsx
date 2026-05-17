@@ -31,28 +31,11 @@ export function NovaMindProtocolChecklist({ runMode }: { runMode: AgentRunMode }
           <strong>Citation audit</strong> — only <code className="protocol-checklist-code">verify_claimed_pmids</code>; compares extracted PMIDs to the session allowlist from literature MCP calls (tool-backed gate, not prompt-only).
         </li>
       </ul>
-      <details className="protocol-checklist protocol-checklist--nested">
-        <summary className="protocol-checklist-summary">Fair eval vs OpenAI (talking points for the deck)</summary>
-        <ul className="protocol-checklist-ul">
-          <li>
-            <strong>Same harness, two APIs</strong> — keep LangSmith + Braintrust; route the same orchestration prompts and transcript export shape to OpenAI and Claude paths behind a thin router.
-          </li>
-          <li>
-            <strong>Scorers first</strong> — define pass/fail on citation_alignment, structured JSON validity, and tool_efficiency before caring about headline model Elo; compare failure modes, not single latency numbers.
-          </li>
-          <li>
-            <strong>Latency &amp; cost</strong> — measure p50/p95 wall time and $/successful run on identical workloads; phase-level timings in this UI illustrate where time goes in one Claude Agent SDK run only.
-          </li>
-          <li>
-            <strong>Migration</strong> — start with one vertical (e.g. hypothesis + citation audit); keep{' '}
-            <strong>OpenAI (GPT‑5 / GPT‑5‑mini)</strong> or <strong>Gemini</strong> on other routes until rubrics stabilize — board gets model optionality
-            without a big-bang rewrite.
-          </li>
-        </ul>
-      </details>
       <p className="protocol-checklist-foot">
-        <strong>SDK note:</strong> Extended thinking is disabled for pipeline runs in this harness; use single-stream mode to enable
-        thinking on one model stream.
+        <strong>SDK note:</strong> This pipeline runs via <code className="protocol-checklist-code">@anthropic-ai/claude-agent-sdk</code>{' '}
+        <code className="protocol-checklist-code">query()</code> with SubagentStart/SubagentStop hooks, AgentDefinition per lane, and
+        MCP server wiring — the same harness primitives described in the presentation. Extended thinking is disabled for pipeline runs; use
+        single-stream mode to enable thinking on one model stream.
       </p>
     </details>
   )

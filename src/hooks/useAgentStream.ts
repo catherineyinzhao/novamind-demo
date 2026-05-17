@@ -18,6 +18,7 @@ const initialStats: LiveRunStats = {
   langsmithChildren: 0,
   braintrustRoot: 0,
   braintrustChildren: 0,
+  schemaViolations: 0,
 }
 
 function parseNdjsonChunk(buffer: string, onLine: (line: string) => void): string {

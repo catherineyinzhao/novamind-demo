@@ -8,6 +8,7 @@ import type {
   SDKMessage,
   SDKPartialAssistantMessage,
   SDKResultMessage,
+  SDKUserMessage,
   SubagentStartHookInput,
   SubagentStopHookInput,
 } from '@anthropic-ai/claude-agent-sdk'
@@ -19,6 +20,7 @@ import {
   betaAssistantMessageToFeed,
   betaFinalMessageToolTail,
   betaStreamEventToFeed,
+  betaUserMessageToFeed,
   createBetaFeedState,
   inferPipelinePhaseFromMcpStreamEvent,
   resetBetaFeedState,
@@ -85,7 +87,7 @@ export async function* runAgentSdkLive(
   assembledRef: AssembledRef,
 ): AsyncGenerator<StreamEvent> {
   const runMode = body.runMode ?? 'single'
-  const singleModel = (body.model?.trim() || process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5-20250929').trim()
+  const singleModel = (body.model?.trim() || process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6').trim()
   const workerModel = (body.subagentModel?.trim() || body.model?.trim() || singleModel).trim()
   const orchestratorModel = (body.orchestratorModel?.trim() || DEFAULT_ORCHESTRATOR_MODEL).trim()
   const enableThinking = Boolean(body.enableThinking && runMode === 'single')
@@ -659,6 +661,38 @@ function resolvePipelineStreamAttribution(
   return { prefix, actorPhase }
 }
 
+function resolveUserMessageActorPhase(
+  um: SDKUserMessage,
+  titlePrefixRef: { value: string },
+  activeSubagentPhaseRef: { value: PipelinePhase | null },
+  pipelineFeedHints: boolean,
+): PipelinePhase | undefined {
+  const delegated =
+    um.parent_tool_use_id != null &&
+    activeSubagentPhaseRef.value != null &&
+    activeSubagentPhaseRef.value !== 'orchestrator'
+      ? activeSubagentPhaseRef.value
+      : undefined
+  if (
+    delegated === 'literature' ||
+    delegated === 'data' ||
+    delegated === 'hypothesis' ||
+    delegated === 'citation'
+  ) {
+    return delegated
+  }
+  const content = um.message.content
+  if (typeof content !== 'string' && pipelineFeedHints) {
+    for (const block of content) {
+      if (block && typeof block === 'object' && block.type === 'tool_result' && 'tool_use_id' in block) {
+        // Phase is resolved via toolUseIdToMeta when emitting; fall through to title prefix.
+        break
+      }
+    }
+  }
+  return titlePrefixToActorPhase(titlePrefixRef.value)
+}
+
 function* handleSdkMessage(
   msg: SDKMessage,
   signal: AbortSignal,
@@ -703,6 +737,26 @@ function* handleSdkMessage(
       pipelineFeedHints,
     )
     resetBetaFeedState(feedState)
+    return
+  }
+
+  if (msg.type === 'user') {
+    const um = msg as SDKUserMessage
+    if (um.isReplay) return
+    const actorPhase = resolveUserMessageActorPhase(
+      um,
+      titlePrefixRef,
+      activeSubagentPhaseRef,
+      pipelineFeedHints,
+    )
+    const prefix =
+      actorPhase === 'literature' ||
+      actorPhase === 'data' ||
+      actorPhase === 'hypothesis' ||
+      actorPhase === 'citation'
+        ? actorPhaseToFeedTitlePrefix(actorPhase)
+        : titlePrefixRef.value
+    yield* betaUserMessageToFeed(um.message, feedState, prefix, actorPhase, pipelineFeedHints)
     return
   }
 

@@ -84,5 +84,5 @@ You have access to **verify_claimed_pmids** (via MCP). **Do not** invent PMIDs; 
 
 Instructions:
 1) Brief plan (### Plan) — list PMIDs you see in the orchestrator + hypothesis handoff text (regex-style extraction is fine).
-2) Call **verify_claimed_pmids** at least once with \`claimed_pmids\` as a deduplicated array of candidate strings (include \`demo-\` style ids if present in the memo).
+2) Call **verify_claimed_pmids** **exactly once** with \`claimed_pmids\` as a single deduplicated array of every candidate PMID string from the handoff (include \`demo-\` style ids if present). Do not call the tool again unless the first call failed with a transport error.
 3) Close with **### Citation audit** — bullets: **admissible** vs **unknown_or_hallucinated** from the tool JSON, and one sentence on what would break **citation_accuracy** scorers in Braintrust if unresolved.`

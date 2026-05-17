@@ -3,6 +3,8 @@ import type { PipelinePhase } from '../../../shared/streamProtocol.ts'
 import { getMcpToolInvocationHint } from '../../lib/mcpToolInvocationHint.ts'
 import type { FeedBlock } from '../../types/live'
 import { stripEmojis } from '../../utils/stripEmojis'
+import { isCitationVerifyToolTitle } from '../../lib/citationVerifyTool.ts'
+import { CitationVerifyCard } from './CitationVerifyCard.tsx'
 import { StreamedMarkdown, ToolCallBody } from './StreamedMarkdown'
 
 type FeedSegment =
@@ -91,6 +93,27 @@ function segmentFeedBlocks(blocks: FeedBlock[]): FeedSegment[] {
   return out
 }
 
+function handoffSchemaLabel(phase: Exclude<PipelinePhase, 'orchestrator'>): string {
+  switch (phase) {
+    case 'literature':
+      return '→ LiteratureHandoff'
+    case 'data':
+      return '→ DataHandoff'
+    case 'hypothesis':
+      return '→ HypothesisInput'
+    case 'citation':
+      return '→ HypothesisDeliverable'
+    default: {
+      const _e: never = phase
+      return String(_e)
+    }
+  }
+}
+
+function HandoffSchemaBadge({ phase }: { phase: Exclude<PipelinePhase, 'orchestrator'> }) {
+  return <span className="feed-handoff-schema-badge">{handoffSchemaLabel(phase)}</span>
+}
+
 function subagentRunHeading(phase: Exclude<PipelinePhase, 'orchestrator'>): string {
   switch (phase) {
     case 'literature':
@@ -162,7 +185,14 @@ function FeedContentBlock({
       ) : null}
       <div className={`ab-body ${b.kind === 'thinking' ? 'thinking-md' : ''}`}>
         {b.kind === 'thinking' ? <StreamedMarkdown source={b.body} /> : null}
-        {b.kind === 'tool' || b.kind === 'tool_result' ? <ToolCallBody body={b.body} /> : null}
+        {b.kind === 'tool' ? <ToolCallBody body={b.body} /> : null}
+        {b.kind === 'tool_result' ? (
+          isCitationVerifyToolTitle(b.title) ? (
+            <CitationVerifyCard body={b.body} />
+          ) : (
+            <ToolCallBody body={b.body} />
+          )
+        ) : null}
         {b.kind === 'text' || b.kind === 'result' ? (
           <>
             <StreamedMarkdown source={b.body} />
@@ -238,7 +268,7 @@ export function AgentFeed({
               <div className="feed-handoff-chain-bridge" aria-hidden>
                 <span className="feed-handoff-chain-bridge-line" />
                 <span className="feed-handoff-chain-bridge-label">
-                  Specialist session continues the Agent tool handoff above
+                  Specialist session · output validated against typed schema before coordinator merge
                 </span>
                 <span className="feed-handoff-chain-bridge-line" />
               </div>
@@ -247,7 +277,10 @@ export function AgentFeed({
                 aria-label={subagentRunHeading(subagent.phase)}
               >
                 <header className="feed-subagent-run-hd">
-                  <div className="feed-subagent-run-hd-title">{subagentRunHeading(subagent.phase)}</div>
+                  <div className="feed-subagent-run-hd-row">
+                    <div className="feed-subagent-run-hd-title">{subagentRunHeading(subagent.phase)}</div>
+                    <HandoffSchemaBadge phase={subagent.phase} />
+                  </div>
                   <div className="feed-subagent-run-hd-sub">
                     Tools and assistant output here run in the delegated context (not the orchestrator thread).
                   </div>
@@ -270,7 +303,10 @@ export function AgentFeed({
               aria-label={subagentRunHeading(seg.phase)}
             >
               <header className="feed-subagent-run-hd">
-                <div className="feed-subagent-run-hd-title">{subagentRunHeading(seg.phase)}</div>
+                <div className="feed-subagent-run-hd-row">
+                  <div className="feed-subagent-run-hd-title">{subagentRunHeading(seg.phase)}</div>
+                  <HandoffSchemaBadge phase={seg.phase} />
+                </div>
               </header>
               <div className="feed-subagent-run-body">
                 {seg.blocks.map((b) => (

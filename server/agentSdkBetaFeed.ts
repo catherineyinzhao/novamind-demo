@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import type { BetaMessage } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
 import type { BetaRawMessageStreamEvent } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
+import type { MessageParam } from '@anthropic-ai/sdk/resources'
 import type { FeedKind, PipelinePhase, StreamEvent } from '../shared/streamProtocol.ts'
 import {
   MCP_SERVER_NAME,
@@ -10,9 +11,13 @@ import {
   MCP_TOOL_VERIFY_PMIDS,
 } from './researchPrompts.ts'
 
+export type ToolUseMeta = { toolName: string; serverName?: string }
+
 export type BetaFeedState = {
   indexToBlock: Map<number, { id: string; kind: FeedKind }>
   toolInputByIndex: Map<number, string>
+  toolUseIdToMeta: Map<string, ToolUseMeta>
+  emittedToolResultIds: Set<string>
   assembled: { text: string }
 }
 
@@ -20,8 +25,83 @@ export function createBetaFeedState(assembled: { text: string }): BetaFeedState 
   return {
     indexToBlock: new Map(),
     toolInputByIndex: new Map(),
+    toolUseIdToMeta: new Map(),
+    emittedToolResultIds: new Set(),
     assembled,
   }
+}
+
+/** Normalize tool_result `content` (string or text blocks) to a single string. */
+export function extractToolResultText(
+  content: string | Array<{ type: string; text?: string }> | undefined,
+): string {
+  if (content == null) return ''
+  if (typeof content === 'string') return content
+  if (!Array.isArray(content)) return ''
+  return content
+    .map((b) => (b && typeof b === 'object' && b.type === 'text' && typeof b.text === 'string' ? b.text : ''))
+    .join('')
+}
+
+function recordToolUseMeta(state: BetaFeedState, toolUseId: string, meta: ToolUseMeta): void {
+  if (toolUseId) state.toolUseIdToMeta.set(toolUseId, meta)
+}
+
+function toolResultTitle(titlePrefix: string, meta: ToolUseMeta | undefined, toolUseId: string): string {
+  if (meta?.serverName) {
+    return feedBlockTitle(titlePrefix, `tool_result · mcp · ${meta.serverName} · ${meta.toolName}`)
+  }
+  const name = meta?.toolName ?? `tool_use_id ${toolUseId.slice(0, 8)}`
+  return feedBlockTitle(titlePrefix, `tool_result · ${name}`)
+}
+
+function resolveToolResultAttribution(
+  toolName: string,
+  titlePrefix: string,
+  actorPhase: PipelinePhase | undefined,
+  pipelineMcpInference: boolean | undefined,
+): { blockTitlePrefix: string; blockActorPhase: PipelinePhase | undefined } {
+  const inferred =
+    pipelineMcpInference === true ? inferPipelinePhaseFromMcpToolUseName(toolName) : undefined
+  const blockTitlePrefix =
+    inferred === 'literature'
+      ? 'Literature review'
+      : inferred === 'data'
+        ? 'Data analysis'
+        : inferred === 'citation'
+          ? 'Citation audit'
+          : titlePrefix
+  return { blockTitlePrefix, blockActorPhase: inferred ?? actorPhase }
+}
+
+function* emitToolResultBlock(
+  state: BetaFeedState,
+  toolUseId: string,
+  body: string,
+  titlePrefix: string,
+  actorPhase: PipelinePhase | undefined,
+  pipelineMcpInference: boolean | undefined,
+  metaOverride?: ToolUseMeta,
+): Generator<StreamEvent> {
+  if (!toolUseId || state.emittedToolResultIds.has(toolUseId)) return
+  const meta = metaOverride ?? state.toolUseIdToMeta.get(toolUseId)
+  const toolName = meta?.toolName ?? ''
+  const { blockTitlePrefix, blockActorPhase } = resolveToolResultAttribution(
+    toolName,
+    titlePrefix,
+    actorPhase,
+    pipelineMcpInference,
+  )
+  state.emittedToolResultIds.add(toolUseId)
+  const id = randomUUID()
+  yield {
+    type: 'block_start',
+    id,
+    blockKind: 'tool_result',
+    title: toolResultTitle(blockTitlePrefix, meta, toolUseId),
+    ...(blockActorPhase ? { actorPhase: blockActorPhase } : {}),
+  }
+  if (body) yield { type: 'block_delta', id, text: body }
 }
 
 function feedBlockTitle(titlePrefix: string, segment: string): string {
@@ -100,6 +180,11 @@ function mapBetaStartKind(
         kind: 'tool',
         title: feedBlockTitle(titlePrefix, `mcp · ${block.server_name} · ${block.name}`),
       }
+    case 'mcp_tool_result':
+      return {
+        kind: 'tool_result',
+        title: feedBlockTitle(titlePrefix, `tool_result · mcp · ${block.server_name ?? 'mcp'} · result`),
+      }
     case 'redacted_thinking':
       return { kind: 'thinking', title: feedBlockTitle(titlePrefix, 'Thinking (redacted)') }
     default: {
@@ -126,10 +211,30 @@ export function* betaStreamEventToFeed(
   }
 
   if (event.type === 'content_block_start') {
+    const block = event.content_block
+    if (block.type === 'mcp_tool_result') {
+      const meta = state.toolUseIdToMeta.get(block.tool_use_id)
+      const body = extractToolResultText(block.content as string | Array<{ type: string; text?: string }>)
+      yield* emitToolResultBlock(
+        state,
+        block.tool_use_id,
+        body,
+        titlePrefix,
+        actorPhase,
+        true,
+        meta,
+      )
+      return
+    }
     const mapped = mapBetaStartKind(event, titlePrefix)
     if (!mapped) return
     const id = randomUUID()
     state.indexToBlock.set(event.index, { id, kind: mapped.kind })
+    if (block.type === 'tool_use') {
+      recordToolUseMeta(state, block.id, { toolName: block.name })
+    } else if (block.type === 'mcp_tool_use') {
+      recordToolUseMeta(state, block.id, { toolName: block.name, serverName: block.server_name })
+    }
     yield {
       type: 'block_start',
       id,
@@ -137,7 +242,7 @@ export function* betaStreamEventToFeed(
       title: mapped.title,
       ...(actorPhase ? { actorPhase } : {}),
     }
-    if (event.content_block.type === 'redacted_thinking') {
+    if (block.type === 'redacted_thinking') {
       yield { type: 'block_delta', id, text: '[Redacted thinking]' }
     }
     return
@@ -225,6 +330,7 @@ export function* betaAssistantMessageToFeed(
       const id = randomUUID()
       state.indexToBlock.set(i, { id, kind: 'tool' })
       state.toolInputByIndex.set(i, full)
+      recordToolUseMeta(state, block.id, { toolName: block.name })
       const toolSeg =
         block.name === 'Agent' ? `tool_use · ${block.name} (delegate)` : `tool_use · ${block.name}`
       const inferred =
@@ -256,6 +362,7 @@ export function* betaAssistantMessageToFeed(
       const id = randomUUID()
       state.indexToBlock.set(i, { id, kind: 'tool' })
       state.toolInputByIndex.set(i, full)
+      recordToolUseMeta(state, block.id, { toolName: block.name, serverName: block.server_name })
       const inferred =
         pipelineMcpInference === true
           ? inferPipelinePhaseFromMcpTool(block.server_name, block.name)
@@ -277,9 +384,52 @@ export function* betaAssistantMessageToFeed(
         ...(blockActorPhase ? { actorPhase: blockActorPhase } : {}),
       }
       if (full) yield { type: 'block_delta', id, text: full }
+    } else if (block.type === 'mcp_tool_result') {
+      const meta = state.toolUseIdToMeta.get(block.tool_use_id)
+      const body = extractToolResultText(block.content as string | Array<{ type: string; text?: string }>)
+      yield* emitToolResultBlock(
+        state,
+        block.tool_use_id,
+        body,
+        titlePrefix,
+        actorPhase,
+        pipelineMcpInference,
+        meta,
+      )
     }
 
     i++
+  }
+}
+
+/** Emit feed blocks for SDK `user` messages (tool_result content returned to the model). */
+export function* betaUserMessageToFeed(
+  message: MessageParam,
+  state: BetaFeedState,
+  titlePrefix: string,
+  actorPhase: PipelinePhase | undefined,
+  pipelineMcpInference?: boolean,
+): Generator<StreamEvent> {
+  const content = message.content
+  if (typeof content === 'string') return
+  for (const block of content) {
+    if (!block || typeof block !== 'object' || !('type' in block)) continue
+    if (block.type === 'tool_result' && 'tool_use_id' in block) {
+      const toolUseId = String(block.tool_use_id)
+      const body = extractToolResultText(
+        'content' in block
+          ? (block.content as string | Array<{ type: string; text?: string }> | undefined)
+          : undefined,
+      )
+      yield* emitToolResultBlock(
+        state,
+        toolUseId,
+        body,
+        titlePrefix,
+        actorPhase,
+        pipelineMcpInference,
+      )
+    }
   }
 }
 
@@ -314,4 +464,5 @@ export function* betaFinalMessageToolTail(
 export function resetBetaFeedState(state: BetaFeedState): void {
   state.indexToBlock.clear()
   state.toolInputByIndex.clear()
+  // Keep toolUseIdToMeta and emittedToolResultIds across assistant turns in one run.
 }

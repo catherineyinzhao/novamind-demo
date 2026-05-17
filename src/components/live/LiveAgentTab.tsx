@@ -13,6 +13,10 @@ import { AgentFeed } from './AgentFeed'
 import { LiveResearchAbout } from './LiveResearchAbout'
 import { NovaMindProtocolChecklist } from './NovaMindProtocolChecklist'
 import { SessionTopologyStrip } from './SessionTopologyStrip'
+import { SessionIdentityChip } from './SessionIdentityChip'
+import { LangSmithTraceChip } from './LangSmithTraceChip'
+import { LiveEvalReadout } from './LiveEvalReadout'
+import { citationEvalFromBlocks } from '../../lib/liveEvalMetrics'
 import type { ObsLine } from '../../types/live'
 import {
   ANTHROPIC_MODEL_OPTIONS,
@@ -82,6 +86,7 @@ export function LiveAgentTab({
   const [workerModel, setWorkerModel] = useState('')
   const [orchestratorModel, setOrchestratorModel] = useState('')
   const [runMode, setRunMode] = useState<AgentRunMode>('pipeline')
+  const [sessionId, setSessionId] = useState('')
   const [enableThinking, setEnableThinking] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     try {
@@ -90,6 +95,9 @@ export function LiveAgentTab({
       return false
     }
   })
+
+  const runStartedAtRef = useRef<number | null>(null)
+  const [elapsedMs, setElapsedMs] = useState<number | null>(null)
 
   const orchPanelHRef = useRef(readOrchPanelHeight())
   const [orchPanelPx, setOrchPanelPx] = useState(readOrchPanelHeight)
@@ -206,6 +214,30 @@ export function LiveAgentTab({
     onLangSmithRunId: (id) => setConfig({ langSmithRunId: id }),
   })
 
+  useEffect(() => {
+    if (!running) {
+      if (runStartedAtRef.current != null) {
+        setElapsedMs(Date.now() - runStartedAtRef.current)
+      }
+      return
+    }
+    const tick = () => {
+      if (runStartedAtRef.current != null) {
+        setElapsedMs(Date.now() - runStartedAtRef.current)
+      }
+    }
+    tick()
+    const id = window.setInterval(tick, 250)
+    return () => window.clearInterval(id)
+  }, [running])
+
+  const citationEval = useMemo(
+    () => (runMode === 'pipeline' ? citationEvalFromBlocks(blocks) : null),
+    [runMode, blocks],
+  )
+
+  const showPipelineEval = runMode === 'pipeline' && (running || Boolean(sessionId))
+
   const phaseWallSummary = useMemo(() => {
     if (runMode !== 'pipeline') return ''
     const order = ['orchestrator', 'literature', 'data', 'hypothesis', 'citation'] as const
@@ -259,6 +291,9 @@ export function LiveAgentTab({
 
   const handleRun = () => {
     if (!keysReady || keysPartial) return
+    runStartedAtRef.current = Date.now()
+    setElapsedMs(0)
+    setSessionId(`session_${Date.now().toString(36)}`)
     const sub =
       runMode === 'single'
         ? undefined
@@ -596,63 +631,61 @@ export function LiveAgentTab({
           <LiveStatsRow
             stats={liveStats}
             running={running}
+            runMode={runMode}
             phaseWallSummary={runMode === 'pipeline' ? phaseWallSummary : undefined}
           />
+          {showPipelineEval && sessionId ? <SessionIdentityChip sessionId={sessionId} /> : null}
+          {runMode === 'pipeline' && config.langSmithRunId.trim() ? (
+            <LangSmithTraceChip
+              runId={config.langSmithRunId.trim()}
+              tenantId={config.langSmithTenantId}
+              projectId={config.langSmithProjectId}
+              region={config.langSmithRegion}
+            />
+          ) : null}
+          {showPipelineEval ? (
+            <LiveEvalReadout
+              citation={citationEval}
+              phaseDurationsMs={phaseDurationsMs}
+              elapsedMs={elapsedMs}
+              schemaViolations={liveStats.schemaViolations}
+              running={running}
+            />
+          ) : null}
         </div>
+        <LiveRunControls
+          prompt={prompt}
+          onPromptChange={setPrompt}
+          running={running}
+          keysReady={keysReady}
+          keysPartial={keysPartial}
+          runMode={runMode}
+          onRun={handleRun}
+          onStop={stop}
+          statusLabel={
+            waitingEnvProbe
+              ? 'Checking keys…'
+              : keysPartial
+                ? 'Resolve API keys'
+                : !keysReady
+                  ? 'Cannot run'
+                  : running
+                    ? 'Streaming…'
+                    : useEnvKeys
+                      ? fetchFailed
+                        ? 'Using server .env (probe failed)'
+                        : 'Using .env keys'
+                      : useUiKeys
+                        ? 'Using pasted keys'
+                        : 'Idle'
+          }
+        />
         <p className="live-feed-caption">
           <strong>Feed</strong> · streamed assistant tokens, <code style={{ fontSize: 10 }}>tool_use</code> / tool payloads, and phase-titled blocks from{' '}
           <code style={{ fontSize: 10 }}>query()</code>.
         </p>
         <div className="live-feed">
           <AgentFeed blocks={blocks} streamingTextId={streamingTextId} running={running} />
-        </div>
-        <div className="live-controls" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 10 }}>
-          <textarea
-            className="tab-input"
-            rows={4}
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Prompt…"
-            style={{ resize: 'vertical', minHeight: 88, fontFamily: "'Lora', serif", fontSize: 13 }}
-          />
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-            <button
-              type="button"
-              className="tab-btn primary"
-              disabled={running || !keysReady || keysPartial}
-              onClick={handleRun}
-              aria-label={
-                runMode === 'pipeline'
-                  ? 'Run research agent (orchestrator and literature, data, hypothesis, citation workers)'
-                  : runMode === 'tools'
-                    ? 'Run multi-turn tool loop harness'
-                    : 'Run single-stream harness'
-              }
-            >
-              Run
-            </button>
-            <button type="button" className="tab-btn danger" disabled={!running} onClick={stop}>
-              Stop
-            </button>
-            <div style={{ flex: 1 }} />
-            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: 'var(--stone)' }}>
-              {waitingEnvProbe
-                ? 'Checking keys…'
-                : keysPartial
-                  ? 'Resolve API keys'
-                  : !keysReady
-                    ? 'Cannot run'
-                    : running
-                      ? 'Streaming…'
-                      : useEnvKeys
-                        ? fetchFailed
-                          ? 'Using server .env (probe failed)'
-                          : 'Using .env keys'
-                        : useUiKeys
-                          ? 'Using pasted keys'
-                          : 'Idle'}
-            </span>
-          </div>
         </div>
         <div
           role="separator"
@@ -688,6 +721,66 @@ export function LiveAgentTab({
           />
           <ObsLogPanel lines={obsLines} />
         </div>
+      </div>
+    </div>
+  )
+}
+
+function LiveRunControls({
+  prompt,
+  onPromptChange,
+  running,
+  keysReady,
+  keysPartial,
+  runMode,
+  onRun,
+  onStop,
+  statusLabel,
+}: {
+  prompt: string
+  onPromptChange: (value: string) => void
+  running: boolean
+  keysReady: boolean
+  keysPartial: boolean
+  runMode: AgentRunMode
+  onRun: () => void
+  onStop: () => void
+  statusLabel: string
+}) {
+  return (
+    <div className="live-controls live-controls--run-bar">
+      <label className="live-controls-label" htmlFor="live-run-prompt">
+        Research task
+      </label>
+      <textarea
+        id="live-run-prompt"
+        className="tab-input live-controls-prompt"
+        rows={3}
+        value={prompt}
+        onChange={(e) => onPromptChange(e.target.value)}
+        placeholder="Prompt…"
+        disabled={running}
+      />
+      <div className="live-controls-actions">
+        <button
+          type="button"
+          className="tab-btn primary"
+          disabled={running || !keysReady || keysPartial}
+          onClick={onRun}
+          aria-label={
+            runMode === 'pipeline'
+              ? 'Run research agent (orchestrator and literature, data, hypothesis, citation workers)'
+              : runMode === 'tools'
+                ? 'Run multi-turn tool loop harness'
+                : 'Run single-stream harness'
+          }
+        >
+          Run
+        </button>
+        <button type="button" className="tab-btn danger" disabled={!running} onClick={onStop}>
+          Stop
+        </button>
+        <span className="live-controls-status">{statusLabel}</span>
       </div>
     </div>
   )

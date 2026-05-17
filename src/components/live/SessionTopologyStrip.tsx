@@ -58,9 +58,9 @@ export function SessionTopologyStrip({
         </div>
       </div>
       <p className="session-topology-tagline">
-        Main thread · plan, risks, per-phase success bars, and{' '}
-        <strong>checkpoints after literature / after data</strong> before the next delegation. Workers · multi-query literature passes and
-        dual experiment summaries, trajectory chart tool, and a final PMID verification pass per protocol.
+        Agent SDK · <code>query()</code> · main thread: plan, risks, checkpoints between delegations. Serial{' '}
+        <strong>Agent</strong> calls: literature → data → hypothesis → citation (data runs after literature handoff). Workers use
+        isolated AgentDefinition contexts and scoped MCP tools.
       </p>
     </div>
   )

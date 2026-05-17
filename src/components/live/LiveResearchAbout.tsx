@@ -12,10 +12,14 @@ export function LiveResearchAbout({
     <div className={`lp-field live-research-about${omitSectionLabel ? ' live-research-about--nested' : ''}`}>
       {omitSectionLabel ? null : <div className="lp-label">About this demo</div>}
       <p className="link-inline-note live-research-about-lede">
-        The default run is a <strong>semi-autonomous research agent</strong>: the orchestrator is prompted for multiple main-thread beats
-        (plan, risks, success criteria, checkpoints between phases), then workers run literature (multi-query PubMed MCP), data (dual
-        experiment summaries plus a deterministic demo trajectory chart), hypothesis synthesis, and a <strong>citation audit</strong> that calls an MCP verify tool against PMIDs returned earlier in the session. Phase progress, tool calls, per-phase wall times, and traces stream in the <strong>main column</strong>{' '}
-        after you press Run — you do not configure step order here.
+        NovaMind is a <strong>semi-autonomous research agent</strong> with specialist sub-agents for <strong>literature review</strong>,{' '}
+        <strong>data analysis</strong>, and <strong>hypothesis generation</strong>. <strong>Document ingestion</strong> and a{' '}
+        <strong>RAG pipeline</strong> support semantic retrieval over <strong>PubMed</strong> (~<strong>3 years</strong>); the data agent{' '}
+        <strong>validates</strong> against <strong>client experimental data</strong>. Early work on <strong>agentic search</strong> and{' '}
+        <strong>context management</strong> targets coherence on long trajectories.
+      </p>
+      <p className="link-inline-note" style={{ marginTop: 8 }}>
+        This Live tab runs that shape via <strong>Claude Agent SDK</strong> <code className="live-research-inline-code">query()</code> — orchestrator checkpoints, then literature → data → hypothesis → citation audit. Progress, tools, and traces stream in the <strong>main column</strong> after <strong>Run</strong>.
       </p>
       {runMode !== 'pipeline' ? (
         <p className="link-inline-note live-research-workflow-alt" role="status">

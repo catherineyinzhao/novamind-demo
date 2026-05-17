@@ -14,7 +14,7 @@ export const ANTHROPIC_MODEL_OPTIONS: { value: string; label: string }[] = [
 ]
 
 /** Matches server `agentStream` fallback when `ANTHROPIC_MODEL` is unset — used to resolve “Server default” in the UI. */
-export const DEFAULT_LIVE_MODEL = 'claude-sonnet-4-5-20250929'
+export const DEFAULT_LIVE_MODEL = 'claude-sonnet-4-6'
 
 // Keep in sync with Anthropic’s extended-thinking compatibility for each model id.
 const EXTENDED_THINKING_MODEL_IDS = new Set<string>([

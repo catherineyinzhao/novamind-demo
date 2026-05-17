@@ -13,6 +13,34 @@ function formatPhaseSeconds(ms: number | undefined): string | null {
   return `${(ms / 1000).toFixed(1)}s`
 }
 
+function PhaseStep({
+  phase,
+  label,
+  activePhase,
+  completedPhases,
+  phaseDurationsMs,
+}: {
+  phase: PipelinePhase
+  label: string
+  activePhase: PipelinePhase | null
+  completedPhases: Partial<Record<PipelinePhase, boolean>>
+  phaseDurationsMs: Partial<Record<PipelinePhase, number>>
+}) {
+  const done = completedPhases[phase]
+  const active = activePhase === phase
+  const cls = done ? 'done' : active ? 'active' : 'pending'
+  const dur = formatPhaseSeconds(phaseDurationsMs[phase])
+  return (
+    <div className={`live-phase-step live-phase-step--${cls}`}>
+      <span className="live-phase-dot" aria-hidden />
+      <span className="live-phase-label">
+        {label}
+        {dur ? <span className="live-phase-duration"> · {dur}</span> : null}
+      </span>
+    </div>
+  )
+}
+
 export function LivePhaseRail({
   runMode,
   activePhase,
@@ -42,26 +70,28 @@ export function LivePhaseRail({
 
   return (
     <div className="live-phase-rail-wrap">
-      <div className="live-phase-rail" aria-label="Pipeline phase progress">
-        {STEPS.map(({ phase, label }) => {
-          const done = completedPhases[phase]
-          const active = activePhase === phase
-          const cls = done ? 'done' : active ? 'active' : 'pending'
-          const dur = formatPhaseSeconds(phaseDurationsMs[phase])
-          return (
-            <div key={phase} className={`live-phase-step live-phase-step--${cls}`}>
-              <span className="live-phase-dot" aria-hidden />
-              <span className="live-phase-label">
-                {label}
-                {dur ? <span className="live-phase-duration"> · {dur}</span> : null}
+      <div className="live-phase-rail" aria-label="Pipeline phase progress (sequential)">
+        {STEPS.map((step, idx) => (
+          <span key={step.phase} className="live-phase-rail-seq">
+            {idx > 0 ? (
+              <span className="live-phase-seq-arrow" aria-hidden>
+                →
               </span>
-            </div>
-          )
-        })}
+            ) : null}
+            <PhaseStep
+              phase={step.phase}
+              label={step.label}
+              activePhase={activePhase}
+              completedPhases={completedPhases}
+              phaseDurationsMs={phaseDurationsMs}
+            />
+          </span>
+        ))}
       </div>
       <p className="live-phase-rail-caption">
-        <strong>Rail</strong> · orchestrator → literature → data → hypothesis → citation audit. Durations are wall time for this run
-        (not comparable to other vendors without the same harness).
+        <strong>Rail</strong> · sequential <code className="live-phase-rail-code">query()</code> delegations: orchestrator →
+        literature → <em>checkpoint</em> → data → hypothesis → citation. Wall times sum specialist phases; data receives
+        literature handoffs before it runs.
       </p>
       {wallParts.length > 0 ? (
         <p className="live-phase-rail-wall" aria-live="polite">

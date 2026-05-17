@@ -14,7 +14,7 @@ export function ObservabilityLoopCard({ langSmithRunId = '' }: { langSmithRunId?
       <div className="obs-loop-hd">Traces, evals, and behavior over time</div>
 
       <div className="obs-loop-flow" aria-label="Default research run shape in this demo">
-        <span className="obs-loop-flow-step">Messages session</span>
+        <span className="obs-loop-flow-step">Agent SDK · query()</span>
         <FlowArrow />
         <span className="obs-loop-flow-step">LangSmith root</span>
         <FlowArrow />
@@ -28,7 +28,7 @@ export function ObservabilityLoopCard({ langSmithRunId = '' }: { langSmithRunId?
       </div>
 
       <p className="obs-loop-sdk-bridge">
-        The Live harness uses <strong>@anthropic-ai/sdk</strong> and the <strong>Messages API</strong>: each <strong>tool</strong> and <strong>text</strong> block in the main feed is the same logical record LangSmith and Braintrust exports treat as dataset rows — graders read structured tool JSON and final outputs, not a parallel scrape of the UI.
+        The Live harness uses <strong>@anthropic-ai/claude-agent-sdk</strong> <code className="obs-loop-inline-code">query()</code> — the same loop that powers Claude Code, packaged as a library. Each <strong>tool</strong> and <strong>text</strong> block in the main feed is the same logical record LangSmith and Braintrust exports treat as dataset rows — graders read structured tool JSON and final outputs, not a parallel scrape of the UI.
       </p>
 
       {runId ? (
@@ -39,8 +39,8 @@ export function ObservabilityLoopCard({ langSmithRunId = '' }: { langSmithRunId?
       ) : null}
 
       <p className="obs-loop-lede">
-        <strong>Important:</strong> LangSmith and Braintrust do not change the model mid-request. Each Messages API
-        session in this demo still maps to <strong>one LangSmith root run</strong> (orchestrator + child spans for{' '}
+        <strong>Important:</strong> LangSmith and Braintrust do not change the model mid-request. Each Agent SDK{' '}
+        <code className="obs-loop-inline-code">query()</code> session in this demo still maps to <strong>one LangSmith root run</strong> (orchestrator + child spans for{' '}
         <strong>literature review</strong>, <strong>data analysis</strong>, <strong>hypothesis generation</strong>, and <strong>citation audit</strong>) and{' '}
         <strong>Braintrust experiments</strong> (scorers on exported trajectories) for the same outputs — they record{' '}
         <em>what happened</em> (tool calls, latency, scores). The <strong>feedback loop</strong> is harness-driven: you

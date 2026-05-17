@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Children, isValidElement, useCallback, useEffect, useMemo, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
+import rehypeRaw from 'rehype-raw'
 import remarkGfm from 'remark-gfm'
 import slidesMarkdown from '../../content/leadershipSlides.md?raw'
 import { MermaidDiagram } from './MermaidDiagram.tsx'
@@ -49,7 +50,9 @@ const slideMdComponents = {
   h3: ({ children, className }: MdHeadingProps) => (
     <h3 className={['leadership-slide-h3', className].filter(Boolean).join(' ')}>{children}</h3>
   ),
-  p: ({ children }: { children?: ReactNode }) => <p className="leadership-slide-p">{children}</p>,
+  p: ({ children, className }: { children?: ReactNode; className?: string }) => (
+    <p className={['leadership-slide-p', className].filter(Boolean).join(' ')}>{children}</p>
+  ),
   ul: ({ children }: { children?: ReactNode }) => <ul className="leadership-slide-ul">{children}</ul>,
   ol: ({ children }: { children?: ReactNode }) => <ol className="leadership-slide-ol">{children}</ol>,
   li: ({ children }: { children?: ReactNode }) => <li className="leadership-slide-li">{children}</li>,
@@ -167,7 +170,7 @@ export function LeadershipSlidesTab() {
         </div>
       ) : null}
       <div className="leadership-slides-stage">
-        <ReactMarkdown remarkPlugins={[remarkGfm]} components={slideMdComponents}>
+        <ReactMarkdown rehypePlugins={[rehypeRaw]} remarkPlugins={[remarkGfm]} components={slideMdComponents}>
           {body}
         </ReactMarkdown>
       </div>

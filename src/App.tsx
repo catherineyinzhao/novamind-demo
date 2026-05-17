@@ -2,8 +2,9 @@ import { useCallback, useState } from 'react'
 import { ObservabilityConfigProvider } from './context/ObservabilityConfigProvider'
 import { PipelineTab } from './components/pipeline/PipelineTab'
 import { LiveAgentTab } from './components/live/LiveAgentTab'
+import { LiveAgentArchitectureTab } from './components/live/LiveAgentArchitectureTab'
 import { LeadershipPresentationTab } from './components/presentation/LeadershipPresentationTab.tsx'
-export type MainTab = 'pipe' | 'live' | 'present'
+export type MainTab = 'pipe' | 'live' | 'arch' | 'present'
 
 function NavSessionPill({
   tab,
@@ -76,6 +77,9 @@ function AppShell() {
         <button type="button" className={`tab ${tab === 'live' ? 'active' : ''}`} onClick={() => setTab('live')}>
           Live agent <span className="tnew">live</span>
         </button>
+        <button type="button" className={`tab ${tab === 'arch' ? 'active' : ''}`} onClick={() => setTab('arch')}>
+          Live demo info
+        </button>
       </div>
 
       <div className="main">
@@ -87,6 +91,9 @@ function AppShell() {
         </div>
         <div className={`tpane ${tab === 'live' ? 'active' : ''}`}>
           <LiveAgentTab onSessionStatus={onLiveSession} />
+        </div>
+        <div className={`tpane ${tab === 'arch' ? 'active' : ''}`}>
+          <LiveAgentArchitectureTab />
         </div>
       </div>
     </div>

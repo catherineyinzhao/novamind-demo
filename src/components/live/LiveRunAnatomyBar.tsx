@@ -29,7 +29,7 @@ export function LiveRunAnatomyBar({
   return (
     <div className="live-anatomy-bar" aria-label="This run uses">
       <span className="live-anatomy-label">This run</span>
-      <Chip>Messages API · streaming</Chip>
+      <Chip>Claude Agent SDK · query()</Chip>
       {runMode === 'single' && enableThinking ? <Chip>Extended thinking</Chip> : null}
       {runMode === 'single' ? <Chip>Model: {modelChip(model)}</Chip> : null}
       {runMode === 'tools' ? (
@@ -42,9 +42,9 @@ export function LiveRunAnatomyBar({
       ) : null}
       {runMode === 'pipeline' ? (
         <>
-          <Chip>Research agent · orchestrator + 3 workers</Chip>
+          <Chip>Agent SDK · orchestrator + 4 specialists · AgentDefinition per lane</Chip>
           <Chip>LangSmith / Braintrust · traces</Chip>
-          <Chip>Orchestrator (no tools): {modelChip(orchestratorModel)}</Chip>
+          <Chip>Orchestrator · planning + delegation: {modelChip(orchestratorModel)}</Chip>
           <Chip>Workers: {modelChip(workerModel)}</Chip>
         </>
       ) : null}

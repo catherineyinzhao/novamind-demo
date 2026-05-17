@@ -33,7 +33,8 @@ function ensureMermaidConfig() {
       labelTextColor: ink,
       titleColor: ink,
       nodeBorder: sand,
-      clusterBkg: surf2,
+      clusterBkg: '#ebe4da',
+      clusterBorder: '#c4a574',
       edgeLabelBackground: cream,
       actorBkg: surf,
       actorBorder: sand,
@@ -43,7 +44,9 @@ function ensureMermaidConfig() {
     },
     flowchart: {
       curve: 'basis',
-      padding: 14,
+      padding: 22,
+      nodeSpacing: 48,
+      rankSpacing: 52,
       useMaxWidth: true,
       htmlLabels: true,
     },
@@ -54,6 +57,8 @@ function MermaidDiagramInner({ chart }: { chart: string }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const reactId = useId().replace(/:/g, '')
   const [err, setErr] = useState<string | null>(null)
+  /** Part 3 pipeline graph — extra CSS cap so it doesn’t dominate the slide. */
+  const pipelineGraphCompact = chart.includes('Parallel subagents · isolated')
 
   useEffect(() => {
     ensureMermaidConfig()
@@ -90,7 +95,15 @@ function MermaidDiagramInner({ chart }: { chart: string }) {
     )
   }
 
-  return <div ref={containerRef} className="leadership-pres-mermaid" aria-hidden={false} />
+  return (
+    <div
+      ref={containerRef}
+      className={['leadership-pres-mermaid', pipelineGraphCompact && 'leadership-pres-mermaid--pipeline-graph']
+        .filter(Boolean)
+        .join(' ')}
+      aria-hidden={false}
+    />
+  )
 }
 
 /**
