@@ -104,14 +104,41 @@ export async function* runAgentStream(
     yield* runAgentSdkLive(body, signal, promptForModel, sdkCtx, assembledRef)
     const assembledOut = assembledRef.text.trim()
 
+    const sdkResult = assembledRef.sdkResult
     btSpan?.log({
       output: { text: assembledOut },
-      metrics: { chars: assembledOut.length },
+      metrics: {
+        ...(sdkResult
+          ? {
+              input_tokens: sdkResult.usage.input_tokens,
+              output_tokens: sdkResult.usage.output_tokens,
+              cache_read_input_tokens: sdkResult.usage.cache_read_input_tokens ?? 0,
+              cache_creation_input_tokens: sdkResult.usage.cache_creation_input_tokens ?? 0,
+              cost_usd: sdkResult.total_cost_usd,
+              duration_ms: sdkResult.duration_ms,
+              duration_api_ms: sdkResult.duration_api_ms,
+              num_turns: sdkResult.num_turns,
+            }
+          : { chars: assembledOut.length }),
+      },
     })
     btSpan?.end()
 
     await ls.updateRun(runId, {
-      outputs: { text: assembledOut, runMode },
+      outputs: {
+        text: assembledOut,
+        runMode,
+        ...(sdkResult
+          ? {
+              usage: sdkResult.usage,
+              model_usage: sdkResult.modelUsage,
+              total_cost_usd: sdkResult.total_cost_usd,
+              num_turns: sdkResult.num_turns,
+              duration_ms: sdkResult.duration_ms,
+              duration_api_ms: sdkResult.duration_api_ms,
+            }
+          : {}),
+      },
       end_time: Date.now(),
     })
 

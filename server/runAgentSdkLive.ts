@@ -8,6 +8,7 @@ import type {
   SDKMessage,
   SDKPartialAssistantMessage,
   SDKResultMessage,
+  SDKResultSuccess,
   SDKUserMessage,
   SubagentStartHookInput,
   SubagentStopHookInput,
@@ -76,8 +77,8 @@ export type RunAgentSdkContext = {
   langsmithProjectName?: string
 }
 
-/** Accumulates streamed assistant text for LangSmith / Braintrust finalizers. */
-export type AssembledRef = { text: string }
+/** Accumulates streamed assistant text and SDK result metrics for LangSmith / Braintrust finalizers. */
+export type AssembledRef = { text: string; sdkResult?: SDKResultSuccess }
 
 export async function* runAgentSdkLive(
   body: AgentStreamRequest,
@@ -127,6 +128,7 @@ export async function* runAgentSdkLive(
   let citeBt: BtSpan | null = null
 
   const mainBufRef = { text: '' }
+  const sdkResultRef: { value: SDKResultSuccess | null } = { value: null }
   let sawLiteratureStart = false
   /** Orchestrator LangSmith child output — main-thread text deltas before the literature subagent starts. */
   const mainCapture = { active: runMode === 'pipeline' }
@@ -580,10 +582,13 @@ export async function* runAgentSdkLive(
         pipelineFeedHints,
         mainCapture,
         mainBufRef,
+        sdkResultRef,
       )
     }
 
     yield* flushQueue()
+
+    if (sdkResultRef.value) assembledRef.sdkResult = sdkResultRef.value
 
     if (runMode === 'pipeline' && orchLsId && orchBt) {
       await endLangSmithChildRun(ls, orchLsId, { outputs: { text: mainBufRef.text } })
@@ -702,6 +707,7 @@ function* handleSdkMessage(
   pipelineFeedHints: boolean,
   mainCapture: { active: boolean },
   mainBufRef: { text: string },
+  sdkResultRef: { value: SDKResultSuccess | null },
 ): Generator<StreamEvent> {
   if (msg.type === 'stream_event') {
     const partial = msg as SDKPartialAssistantMessage
@@ -762,8 +768,9 @@ function* handleSdkMessage(
 
   if (msg.type === 'result') {
     const rm = msg as SDKResultMessage
-    if (rm.subtype === 'success' && typeof rm.result === 'string') {
-      feedState.assembled.text = feedState.assembled.text || rm.result
+    if (rm.subtype === 'success') {
+      if (typeof rm.result === 'string') feedState.assembled.text = feedState.assembled.text || rm.result
+      sdkResultRef.value = rm
     }
     return
   }
