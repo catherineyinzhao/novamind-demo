@@ -1,4 +1,4 @@
-const KEY = 'novamind-obs-config-v1'
+const KEY = 'novamind-obs-config-v2'
 
 export function loadJson<T>(fallback: T): T {
   try {

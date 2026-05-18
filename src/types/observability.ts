@@ -19,7 +19,7 @@ export interface ObservabilityConfig {
 
 export const defaultObservabilityConfig = (): ObservabilityConfig => ({
   braintrustOrg: '',
-  braintrustProject: '',
+  braintrustProject: 'novamind-demo',
   braintrustExperimentId: '',
   langSmithTenantId: '',
   langSmithProjectId: '',
