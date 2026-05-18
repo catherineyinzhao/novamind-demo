@@ -30,7 +30,7 @@ export async function createLangSmithChildRun(
     name: opts.name,
     run_type: opts.run_type,
     inputs: opts.inputs,
-    project_name: opts.project_name,
+    session_name: opts.project_name,
     start_time: startTime,
   })
 
