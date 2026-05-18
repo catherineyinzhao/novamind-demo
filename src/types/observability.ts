@@ -22,7 +22,7 @@ export const defaultObservabilityConfig = (): ObservabilityConfig => ({
   braintrustProject: 'novamind-demo',
   braintrustExperimentId: '',
   langSmithTenantId: '',
-  langSmithProjectId: '',
+  langSmithProjectId: 'novamind-demo',
   langSmithRunId: '',
   langSmithRegion: 'us',
 })
